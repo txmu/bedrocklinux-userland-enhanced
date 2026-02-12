@@ -14,6 +14,7 @@ detect_init() {
     elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v rc-service" >/dev/null 2>&1; then echo "openrc"
     elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v sv" >/dev/null 2>&1; then echo "runit"
     elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v s6-svc" >/dev/null 2>&1; then echo "s6"
+    elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v herd" >/dev/null 2>&1; then echo "shepherd"
     elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v initctl" >/dev/null 2>&1; then echo "upstart"
     elif /bedrock/bin/strat -r "${STRATUM}" test -x /sbin/ninit; then echo "ninit"
     elif /bedrock/bin/strat -r "${STRATUM}" test -x /sbin/simpleinit; then echo "simpleinit"
@@ -42,6 +43,10 @@ case "${INIT_TYPE}" in
             "start")   exec /bedrock/bin/strat "${STRATUM}" s6-svc -u "/run/service/${SERVICE}" ;;
             "stop")    exec /bedrock/bin/strat "${STRATUM}" s6-svc -d "/run/service/${SERVICE}" ;;
             "status")  exec /bedrock/bin/strat "${STRATUM}" s6-svstat "/run/service/${SERVICE}" ;;
+        esac ;;
+    "shepherd")
+        case "${ACTION}" in
+            *) exec /bedrock/bin/strat "${STRATUM}" herd "${ACTION}" "${SERVICE}" ;;
         esac ;;
     "upstart") exec /bedrock/bin/strat "${STRATUM}" initctl "${ACTION}" "${SERVICE}" ;;
     *)
