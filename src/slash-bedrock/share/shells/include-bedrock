@@ -1,3 +1,12 @@
 
 # Automatically added by Bedrock Linux
 . /bedrock/run/profile
+
+# Bedrock Linux PS1 integration
+if [ -n "${BEDROCK_PS1}" ] && [ -z "${BEDROCK_STRATUM_PROMPT_SET}" ]; then
+	current_stratum=$(/bedrock/bin/brl which)
+	if [ -n "$current_stratum" ]; then
+		PS1="(${current_stratum}) ${PS1}"
+		export BEDROCK_STRATUM_PROMPT_SET=1
+	fi
+fi

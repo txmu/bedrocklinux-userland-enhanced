@@ -24,6 +24,10 @@ import() {
 	esac
 
 	tarball="${tmp}/tar"
+	tar_secure_opts=""
+	if tar --help 2>&1 | grep -q -- "--restrict"; then
+		tar_secure_opts="--restrict"
+	fi
 	case "${src}" in
 	*.tar) tarball="${src}";;
 	*.tar.gz) step "Decompressing" ; gunzip < "${src}" > "${tarball}" ;;
@@ -56,5 +60,5 @@ import() {
 	fi
 
 	step "Extracting tarball"
-	tar -xv -f "${tarball}" -C "${tgt}" | awk 'NR%100==0' | progress_unknown
+	tar $tar_secure_opts -xv -f "${tarball}" -C "${tgt}" | awk 'NR%100==0' | progress_unknown
 }

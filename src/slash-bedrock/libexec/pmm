@@ -1688,7 +1688,7 @@ function execute_cmds(cmds,
 				# Parallel search optimization
 				cmd = implementations[package_manager, operation]
 				env = prep_shell_environment(stratum, package_manager, items, cmd)
-				system(env""cmd" &")
+				print env""cmd >> "/tmp/bedrock-pmm-queue"
 				next
 			}
 			if ((package_manager, operation) in implementations) {
@@ -1712,7 +1712,7 @@ function execute_cmds(cmds,
 				# Parallel search optimization
 				cmd = implementations[package_manager, operation]
 				env = prep_shell_environment(stratum, package_manager, items, cmd)
-				system(env""cmd" &")
+				print env""cmd >> "/tmp/bedrock-pmm-queue"
 				next
 			}
 			if ((package_manager, operation) in implementations) {
@@ -1740,7 +1740,10 @@ function execute_cmds(cmds,
 	}
 
 	if (selected_operation ~ /search/) {
-		system("wait")
+		close("/tmp/bedrock-pmm-queue")
+		system("xargs -P 8 -I {} sh -c {} < /tmp/bedrock-pmm-queue")
+		system("rm -f /tmp/bedrock-pmm-queue")
+	}
 	}
 	if (updated_cache) {
 		notice "Cleaning up"

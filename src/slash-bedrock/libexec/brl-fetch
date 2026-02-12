@@ -228,6 +228,13 @@ pick_release() {
 }
 
 pick_mirror() {
+	if [ -r "/bedrock/share/brl-fetch/mirrors.conf" ]; then
+		local ext_mirror=$(grep "^${distro}=" /bedrock/share/brl-fetch/mirrors.conf | cut -d= -f2-)
+		if [ -n "$ext_mirror" ]; then
+			echo "$ext_mirror"
+			return
+		fi
+	fi
 	test_file="${1}"
 
 	# If mirror was specified on cmdline, use it.

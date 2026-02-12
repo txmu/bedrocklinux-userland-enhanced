@@ -1004,7 +1004,7 @@ format:
 		"$$(echo "=== Completed formatting code base ===")" \
 		"$$(echo "=== Completed formatting code base ===" | sed 's/./=/g')"
 
-check:
+check: check-config-logic
 	# Run various static checkers against the codebase.
 	#
 	# Generally, one should strive to get these all to pass submit
@@ -1436,3 +1436,12 @@ release: \
 		"$$(echo "=== Completed Bedrock Linux $(BEDROCK_VERSION) release build ===" | sed 's/./=/g')" \
 		"$$(echo "=== Completed Bedrock Linux $(BEDROCK_VERSION) release build ===")" \
 		"$$(echo "=== Completed Bedrock Linux $(BEDROCK_VERSION) release build ===" | sed 's/./=/g')"
+
+check-config-logic:
+	# Verify bedrock.conf paths exist in source
+	@echo "Checking bedrock.conf logic consistency..."
+	@grep " = /" src/slash-bedrock/etc/bedrock.conf | cut -d= -f2 | sed 's/,//g' | xargs -n1 | while read path; do \
+		if [ ! -e "src/slash-bedrock$$path" ] && [ ! -e "src$$path" ]; then \
+			echo "WARNING: Config references $$path which is missing in source tree"; \
+		fi \
+	done

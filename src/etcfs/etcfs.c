@@ -1173,8 +1173,8 @@ static void *m_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
 	/*
 	 * Pick up changes from lower filesystem immediately.
 	 */
-	cfg->entry_timeout = 0;
-	cfg->attr_timeout = 0;
+	cfg->entry_timeout = 0.5;
+	cfg->attr_timeout = 0.5;
 	cfg->negative_timeout = 0;
 
 	return NULL;
