@@ -46,21 +46,31 @@ root filesystem directory. This is known as "Ad-Hoc Mode".
 
     strat /mnt/arch-rootfs /bin/bash
 
-**WARNING: This feature is a Proof-of-Concept (PoC).**
+**Design Philosophy & Benefits:**
+In this mode, standard ownership and permission checks are intentionally
+bypassed to enable specific Power User scenarios:
 
-Please be aware of the following critical caveats before use:
+1.  **Zero-Setup Entry:** Allows entering user-owned directories (e.g., extracted
+    tarballs in /home) as root without requiring recursive `chown`.
+2.  **System Rescue:** Enables access to broken systems or mounted disks where
+    UIDs/GIDs are mismatched or filesystem permissions are corrupted.
+3.  **Foreign Filesystems:** Supports running environments located on filesystems
+    that do not support POSIX permissions (e.g., FAT32, exFAT, Network Shares).
+4.  **Privileged Build Environments:** Unlike Rootless mode, this retains actual
+    Root capabilities inside the environment, which is required for certain
+    package managers and build tools.
 
-1.  **Security Risks:** This mode skips standard security checks (such as
-    verifying directory ownership). Using this on untrusted directories may
-    lead to privilege escalation or security escapes.
-2.  **Ecosystem Incompatibility:** Ad-Hoc paths are not registered in the
-    Bedrock database. Consequently, tools like `brl list`, `brl which`, and
-    the Package Manager Manager (`pmm`) will **not** work correctly inside
-    or against an ad-hoc environment.
-3.  **Configuration Bypass:** Global configuration in `/bedrock/etc/bedrock.conf`
-    (e.g., restrictions, cross-stratum configuration) is bypassed.
+**CRITICAL SECURITY WARNING:**
+Because security checks are skipped for flexibility:
 
-Use this mode strictly for development, debugging, or recovery purposes.
+1.  **Privilege Escalation:** `strat` trusts the target directory. If a user
+    tricks root into running `strat` on a malicious directory, the system
+    can be compromised.
+2.  **Ecosystem Incompatibility:** Ad-Hoc paths are not indexed. Bedrock tools
+    like `brl`, `pmm`, and `crossfs` will NOT function correctly.
+3.  **Configuration Bypass:** Global settings in `bedrock.conf` are ignored.
+
+**Use only on directories you trust.**
 
 Installation
 ------------
