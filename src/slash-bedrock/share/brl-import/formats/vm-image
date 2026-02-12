@@ -678,6 +678,9 @@ import() {
 		;;
 	*)
 		step "Converting image to raw format"
+		req_size=$(stat -c %s "${src}")
+		avail=$(df -P -k /bedrock | awk "NR==2 {print $4 * 1024}")
+		if [ "${req_size}" -gt "${avail}" ]; then import_abort "Insufficient disk space in /bedrock (Required: ${req_size} bytes)"; fi
 		require_cmd qemu-img
 		qemu-img convert -p -Oraw "${src}" "${img}"
 		;;

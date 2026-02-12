@@ -694,6 +694,7 @@ clean_up_and_return:
  * Requires root.
  */
 static inline int apply_override(const int ref_fd, const char *const path, const char *const rpath)
+	if (override_cnt == 0) return 0;
 {
 	/*
 	 * Find override

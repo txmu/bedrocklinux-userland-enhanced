@@ -1684,6 +1684,13 @@ function execute_cmds(cmds,
 			list_pmm_ui_files()
 		} else if (post == "-" || post == "update-package-cache") {
 			# Return value needed, use run_shell()
+			if (operation ~ /^search/) {
+				# Parallel search optimization
+				cmd = implementations[package_manager, operation]
+				env = prep_shell_environment(stratum, package_manager, items, cmd)
+				system(env""cmd" &")
+				next
+			}
 			if ((package_manager, operation) in implementations) {
 				ret = run_shell(implementations[package_manager, operation], stratum, package_manager, items, 1)
 				if (ret != 0) {
@@ -1701,6 +1708,13 @@ function execute_cmds(cmds,
 			}
 		} else if (post ~ "^prepend-") {
 			# stdout value needed, use get_shell_output()
+			if (operation ~ /^search/) {
+				# Parallel search optimization
+				cmd = implementations[package_manager, operation]
+				env = prep_shell_environment(stratum, package_manager, items, cmd)
+				system(env""cmd" &")
+				next
+			}
 			if ((package_manager, operation) in implementations) {
 				get_shell_output(implementations[package_manager, operation], stratum, package_manager, items, 1, _return, output)
 				for (o = 1; o in output; o++) {
@@ -1725,6 +1739,9 @@ function execute_cmds(cmds,
 		}
 	}
 
+	if (selected_operation ~ /search/) {
+		system("wait")
+	}
 	if (updated_cache) {
 		notice "Cleaning up"
 		clear_old_cache()

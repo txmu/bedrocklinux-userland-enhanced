@@ -148,7 +148,9 @@ VENDOR=$(BUILD)/vendor
 SUPPORT=$(BUILD)/support
 SLASHBR=$(BUILD)/bedrock
 COMPLETED=$(BUILD)/completed
-MUSLCC=$(SUPPORT)/bin/musl-gcc
+CCACHE := $(shell command -v ccache 2>/dev/null)
+
+MUSLCC=$(CCACHE) $(SUPPORT)/bin/musl-gcc
 
 INDENT_FLAGS=--linux-style --dont-line-up-parentheses \
 	--continuation-indentation8 --indent-label0 --case-indentation0 --line-length 120

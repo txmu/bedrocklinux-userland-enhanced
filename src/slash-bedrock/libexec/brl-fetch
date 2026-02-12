@@ -258,10 +258,8 @@ pick_mirror() {
 	notice "Checking bedrock.conf [brl-fetch-mirror] items" >&2
 	rm -f "${mirror_file}"
 	(
-		echo "X"
 		# If bedrock.conf specifies mirror, try it.  If it works, use it.
 		for mirror in $(cfg_value "brl-fetch-mirrors" "${key}"); do
-			echo "X"
 			if download -q "${mirror}/${test_file}" - >/dev/null; then
 				echo "${mirror}" >"${mirror_file}"
 				return
@@ -270,7 +268,6 @@ pick_mirror() {
 
 		# If bedrock.conf specifies mirror prefix, try it.  If it works, use it.
 		for prefix in $(cfg_values "brl-fetch-mirrors" "mirror-prefix"); do
-			echo "X"
 			if download -q "${prefix}/${suffix}/${test_file}" - >/dev/null; then
 				echo "${prefix}/${suffix}" >"${mirror_file}"
 				return
@@ -297,7 +294,6 @@ pick_mirror() {
 	if [ "${count}" -gt 10 ]; then
 		notice "Fast filtering ${count} to top 10" >&2
 		(
-			echo "X"
 			(
 				# shellcheck disable=SC2086
 				/bedrock/libexec/netselect -s 10 -v ${mirrors} | awk '{print$2}' >"${mirror_file}"
@@ -406,9 +402,10 @@ checksum_downloads() {
 		file="${dir}/$(echo "${url}" | sed "s,^.*/,,")"
 		checksum_cmd="$(echo "${line}" | cut -d"	" -f2)"
 		checksum="$(echo "${line}" | cut -d"	" -f3)"
-		checksum_download "${file}" "${checksum_cmd}" "${checksum}" "${url}" >/dev/null 2>&1
-		echo "X"
-	done | progress_bar "$(echo "${lines}" | wc -l)"
+		[ $(jobs -r | wc -l) -ge 10 ] && wait -n 2>/dev/null
+	done
+	wait
+	echo "" | progress_bar
 }
 
 extract_debs() {
@@ -501,7 +498,10 @@ extract_pacman_pkgs() {
 		else
 			abort "Unrecognized file extension: ${file}"
 		fi
-	done | progress_bar "${#}"
+		[ $(jobs -r | wc -l) -ge 10 ] && wait -n 2>/dev/null
+	done
+	wait
+	echo "" | progress_bar
 }
 
 debdb_to_brldb() {
@@ -787,7 +787,10 @@ pacmandb_to_brldb() {
 				checksum = ""
 			}' "${pkg}/ALL"
 		done
-	done | progress_bar "${total}"
+		[ $(jobs -r | wc -l) -ge 10 ] && wait -n 2>/dev/null
+	done
+	wait
+	echo "" | progress_bar
 }
 
 brldb_calculate_required_packages() {
