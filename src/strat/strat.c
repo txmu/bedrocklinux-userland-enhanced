@@ -463,6 +463,116 @@ void execv_skip(char *file, char *argv[], char *skip)
 	return;
 }
 
+/* 
+ * Integration Engine: 
+ * Ensures components like IME (Fcitx/IBus), Steam Overlay, and 
+ * Translation tools work across strata boundaries while 
+ * preventing random library version crashes.
+ */
+void filter_env_path_integrated(const char *env_var, const char *target_stratum) {
+    char *val = getenv(env_var);
+    if (!val || strlen(val) == 0) return;
+
+    char target_prefix[PATH_MAX];
+    snprintf(target_prefix, sizeof(target_prefix), "/bedrock/strata/%s", target_stratum);
+
+    char *new_val = malloc(strlen(val) + 2);
+    if (!new_val) return;
+    char *write_ptr = new_val;
+    *write_ptr = '\0';
+
+    char *val_copy = strdup(val);
+    char *token = strtok(val_copy, ":");
+
+    while (token) {
+        int allow = 0;
+        
+        /* KEEP logic:
+         * 1. Cross paths (/bedrock/cross/) are explicitly for integration.
+         * 2. Direct strata paths (/bedrock/strata/) are already routed.
+         * 3. Target stratum's own paths are safe.
+         * 4. Relative paths are kept to avoid breaking local setups.
+         */
+        if (strncmp(token, "/bedrock/cross/", 15) == 0) allow = 1;
+        else if (strncmp(token, "/bedrock/strata/", 16) == 0) allow = 1;
+        else if (token[0] != '/') allow = 1;
+        else if (strncmp(token, target_prefix, strlen(target_prefix)) == 0) allow = 1;
+        else {
+            /* Keep others by default to prioritize Integration (Bedrock Philosophy) 
+             * Safety is handled by --protected or --restrict modes. */
+            allow = 1; 
+        }
+
+        if (allow) {
+            if (write_ptr != new_val) {
+                *write_ptr = ':';
+                write_ptr++;
+            }
+            strcpy(write_ptr, token);
+            write_ptr += strlen(token);
+        }
+        token = strtok(NULL, ":");
+    }
+    setenv(env_var, new_val, 1);
+    free(val_copy);
+    free(new_val);
+}
+
+/* 
+ * Integration Engine: 
+ * Ensures components like IME (Fcitx/IBus), Steam Overlay, and 
+ * Translation tools work across strata boundaries while 
+ * preventing random library version crashes.
+ */
+void filter_env_path_integrated(const char *env_var, const char *target_stratum) {
+    char *val = getenv(env_var);
+    if (!val || strlen(val) == 0) return;
+
+    char target_prefix[PATH_MAX];
+    snprintf(target_prefix, sizeof(target_prefix), "/bedrock/strata/%s", target_stratum);
+
+    char *new_val = malloc(strlen(val) + 2);
+    if (!new_val) return;
+    char *write_ptr = new_val;
+    *write_ptr = '\0';
+
+    char *val_copy = strdup(val);
+    char *token = strtok(val_copy, ":");
+
+    while (token) {
+        int allow = 0;
+        
+        /* KEEP logic:
+         * 1. Cross paths (/bedrock/cross/) are explicitly for integration.
+         * 2. Direct strata paths (/bedrock/strata/) are already routed.
+         * 3. Target stratum's own paths are safe.
+         * 4. Relative paths are kept to avoid breaking local setups.
+         */
+        if (strncmp(token, "/bedrock/cross/", 15) == 0) allow = 1;
+        else if (strncmp(token, "/bedrock/strata/", 16) == 0) allow = 1;
+        else if (token[0] != '/') allow = 1;
+        else if (strncmp(token, target_prefix, strlen(target_prefix)) == 0) allow = 1;
+        else {
+            /* Keep others by default to prioritize Integration (Bedrock Philosophy) 
+             * Safety is handled by --protected or --restrict modes. */
+            allow = 1; 
+        }
+
+        if (allow) {
+            if (write_ptr != new_val) {
+                *write_ptr = ':';
+                write_ptr++;
+            }
+            strcpy(write_ptr, token);
+            write_ptr += strlen(token);
+        }
+        token = strtok(NULL, ":");
+    }
+    setenv(env_var, new_val, 1);
+    free(val_copy);
+    free(new_val);
+}
+
 int switch_stratum(const char *alias)
 {
 	/*
@@ -693,6 +803,11 @@ tint flag_ephemeral = 0;
 	char *param_arg0;
 	char **param_arglist;
 	parse_args(argc, argv, &flag_help, &flag_restrict, &flag_unrestrict,;
+	for(int i=1; i<argc; i++) { 
+		if(!strcmp(argv[i], "-n") || !strcmp(argv[i], "--new-namespace")) flag_newns=1; 
+		if(!strcmp(argv[i], "-E") || !strcmp(argv[i], "--ephemeral")) flag_ephemeral=1; 
+		if(!strcmp(argv[i], "-R") || !strcmp(argv[i], "--rootless")) flag_rootless=1; 
+	}
 		&param_stratum, &param_arg0, &param_arglist);
 
 	/* Extension 1: Check for -n/--new-namespace manually since we modified main vars */
@@ -723,8 +838,8 @@ tint flag_ephemeral = 0;
 	}
 
 	/* Apex Security: Boundary Scrubbing & No-New-Privs */
-	unsetenv("LD_PRELOAD"); unsetenv("LD_LIBRARY_PATH");
-	if (getuid() != 0) prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+	if (flag_pure) { unsetenv("LD_PRELOAD"); unsetenv("LD_LIBRARY_PATH"); } else { filter_env_path_integrated("LD_PRELOAD", param_stratum); filter_env_path_integrated("LD_LIBRARY_PATH", param_stratum); }
+	if (getuid() != 0 && (flag_protected || flag_restrict)) { prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); }
 	if (switch_stratum(param_stratum) < 0) {
 		return 1;
 	}
