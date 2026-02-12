@@ -303,7 +303,13 @@ get_init_choice() {
 			printf "(${color_sub}${init_timeout}s${color_norm}): " >&2
 			read -r -t "${init_timeout}" selected_num
 		else
-			read -r selected_num
+			read -r input_str
+		fi
+		if echo "${input_str}" | grep -q "^s[[:space:]]*[0-9]"; then
+			selected_num=$(echo "${input_str}" | awk "{print $2}")
+			tgt=$(list_init_options | awk -v"n=${selected_num}" "NR==n {print $1":"$3}")
+			if [ -n "${tgt}" ]; then mount -o remount,rw /; sed -i "s|^default =.*|default = ${tgt}|" /bedrock/etc/bedrock.conf; fi
+		else selected_num="${input_str}"; fi
 		fi
 		if [ -z "${selected_num}" ]; then
 			selected_num=0
@@ -457,6 +463,9 @@ done
 
 step "Applying configuration"
 /bedrock/libexec/brl-apply --skip-repair
+
+step "Starting Kernel Monitor"
+if [ -x /bedrock/libexec/brl-kmon ]; then /bedrock/libexec/brl-kmon >/dev/null 2>&1 & fi
 
 step "Handing control off to ${color_strat}${init_stratum}${color_glue}:${color_cmd}${init_cmd}${color_norm}"
 

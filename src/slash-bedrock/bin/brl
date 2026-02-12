@@ -61,7 +61,7 @@ case "${1:-}" in
 	print_help
 	exit_success
 	;;
-"strat" | "list" | "which" | "fetch" | "import" | "remove" | "rename" | "copy" | "status" | "enable" | "disable" | "repair" | "hide" | "show" | "alias" | "deref" | "apply" | "update" | "version" | "report" | "tutorial")
+"strat" | "list" | "do" | "service" | "which" | "fetch" | "import" | "remove" | "rename" | "copy" | "status" | "enable" | "disable" | "repair" | "hide" | "show" | "alias" | "deref" | "apply" | "update" | "version" | "report" | "tutorial")
 	backend="/bedrock/libexec/brl-${1}"
 	shift
 	exec "${backend}" "${@}"

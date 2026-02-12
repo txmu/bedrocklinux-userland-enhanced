@@ -822,6 +822,12 @@ $(SLASHBR)/libexec/bouncer: $(COMPLETED)/builddir $(COMPLETED)/musl
 		cp ./bouncer $(SLASHBR)/libexec/bouncer
 bouncer: $(SLASHBR)/libexec/bouncer
 
+$(SLASHBR)/libexec/brl-kmon: $(COMPLETED)/builddir $(COMPLETED)/musl
+	rm -rf $(SRC)/kmon
+	cp -r src/kmon/ $(SRC)
+	cd $(SRC)/kmon && $(MAKE) CC=$(MUSLCC) && cp ./kmon $(SLASHBR)/libexec/brl-kmon
+kmon: $(SLASHBR)/libexec/brl-kmon
+
 $(SLASHBR)/libexec/etcfs: $(COMPLETED)/builddir \
 	$(COMPLETED)/musl \
 	$(COMPLETED)/libfuse
@@ -851,6 +857,7 @@ $(BUILD)/userland.tar: \
 	$(COMPLETED)/builddir \
 	$(SLASHBR)/bin/strat \
 	$(SLASHBR)/libexec/bouncer \
+	$(SLASHBR)/libexec/brl-kmon \
 	$(SLASHBR)/libexec/busybox \
 	$(SLASHBR)/libexec/crossfs \
 	$(SLASHBR)/libexec/curl \

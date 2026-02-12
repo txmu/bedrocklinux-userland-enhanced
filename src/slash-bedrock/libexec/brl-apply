@@ -447,4 +447,14 @@ for stratum in $(/bedrock/bin/brl list -ei); do
 	mv "${init}-bedrock-patch" "${init}"
 done
 
+# Configure Kernel Monitor
+kmon_ctrl="$(cfg_value "bootloader" "controller")"
+kmon_cmd="$(cfg_value "bootloader" "update-command")"
+if [ -n "${kmon_ctrl}" ] && [ -n "${kmon_cmd}" ]; then
+	mkdir -p /bedrock/run
+	echo "${kmon_ctrl}:${kmon_cmd}" > /bedrock/run/kmon_config
+else
+	rm -f /bedrock/run/kmon_config
+fi
+
 exit_success
