@@ -667,6 +667,29 @@ int switch_stratum(const char *alias)
 
 	char stratum_path[STRATA_ROOT_LEN + stratum_len + 1];
 	if (stratum[0] == "/") {
+    /* Ad-Hoc Policy Check */
+    int adhoc_policy = 1; /* Default to Verified */
+    FILE *fp_policy = fopen("/bedrock/etc/strat_adhoc_policy", "r");
+    if (fp_policy) { fscanf(fp_policy, "%d", &adhoc_policy); fclose(fp_policy); }
+
+    if (stratum[0] == '/') {
+        if (adhoc_policy == 0) {
+            fprintf(stderr, "strat: Ad-Hoc mode is disabled by system policy.\n");
+            return -1;
+        }
+        if (adhoc_policy == 1) {
+            struct stat adhoc_st;
+            if (getuid() != 0) {
+                fprintf(stderr, "strat: Verified Ad-Hoc mode requires real root privileges.\n");
+                return -1;
+            }
+            if (stat(stratum, &adhoc_st) != 0 || adhoc_st.st_uid != 0) {
+                fprintf(stderr, "strat: Verified Ad-Hoc mode requires the target path to be owned by root.\n");
+                return -1;
+            }
+        }
+        /* If policy is 2, proceed without checks */
+    }
 		/* Innovation 2: Ad-Hoc Stratum Mode */
 		if (realpath(stratum, stratum_path) == NULL) {
 			fprintf(stderr, "strat: invalid ad-hoc path %s\n", stratum);
