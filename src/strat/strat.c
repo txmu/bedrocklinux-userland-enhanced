@@ -27,6 +27,11 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sched.h>
+#include <limits.h>
+#include <sys/mount.h>
+#include <sys/syscall.h>
+#include <sys/prctl.h>
+#include <sched.h>
 #include <sys/mount.h>
 #include <sys/syscall.h>
 #include <limits.h>
@@ -105,6 +110,11 @@ void parse_args(int argc, char *argv[], int *flag_help, int *flag_restrict,
 			argv++;
 			argc--;
 		} else if (argc > 0 && (strcmp(argv[0], "-u") == 0 || strcmp(argv[0], "--unrestrict") == 0)) {
+		"  -n, --new-namespace  create new private namespace (net/mount/ipc)\n"
+		"  -E, --ephemeral       disposable mode: discard changes after exit (uses OverlayFS)\n"
+		"  -R, --rootless        rootless mode: run without SUID (requires user_namespaces)\n"
+		"  -P, --protected       pledge mode: no network, masked /home (OpenBSD-style)\n"
+		"      --pure            pure mode: no Bedrock environment integration\n"
 t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
 		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
 		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
@@ -140,6 +150,11 @@ void print_help(void)
 		"Options:\n"
 		"  -r, --restrict    disable cross-stratum hooks\n"
 		"  -u, --unrestrict  do not disable cross-stratum hooks\n"
+		"  -n, --new-namespace  create new private namespace (net/mount/ipc)\n"
+		"  -E, --ephemeral       disposable mode: discard changes after exit (uses OverlayFS)\n"
+		"  -R, --rootless        rootless mode: run without SUID (requires user_namespaces)\n"
+		"  -P, --protected       pledge mode: no network, masked /home (OpenBSD-style)\n"
+		"      --pure            pure mode: no Bedrock environment integration\n"
 t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
 		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
 		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
@@ -598,6 +613,22 @@ int switch_stratum(const char *alias)
 		strcpy(stratum_path, mountdir);
 		/* Note: Cleanup is left to OS on reboot or user in /tmp for this simplified C impl */
 	}
+	if (flag_rootless) {
+		if (unshare(CLONE_NEWUSER | CLONE_NEWNS) == 0) {
+			char m[64]; sprintf(m, "0 %d 1", getuid());
+			FILE *f = fopen("/proc/self/uid_map", "w"); if(f){fprintf(f, "%s", m); fclose(f);}
+			goto skip_cap_check;
+		}
+	}
+	if (flag_ephemeral || flag_protected || flag_newns) {
+		unshare(CLONE_NEWNS | (flag_protected ? CLONE_NEWNET : 0));
+		if (flag_protected) mount("tmpfs", "/home", "tmpfs", 0, "size=1M,mode=0700");
+	}
+	if (flag_ephemeral) {
+		char o[1024]; sprintf(o, "lowerdir=%s,upperdir=/tmp,workdir=/tmp", stratum_path);
+		mount("overlay", "/mnt", "overlay", 0, o); strcpy(stratum_path, "/mnt");
+	}
+	skip_cap_check:;
 	if (chroot_to_stratum(stratum_path) < 0) {
 		fprintf(stderr, "strat: unable chroot() to %s\n", stratum_path);
 		return -1;
@@ -628,6 +659,17 @@ int switch_stratum(const char *alias)
 }
 
 int main(int argc, char *argv[])
+	/* Apex: Mode Detection */
+	char *me = strrchr(argv[0], "/"); me = me ? me + 1 : argv[0];
+	if (!strcmp(me, "brl-chroot")) flag_pure = 1;
+	/* Apex: Argument Parser */
+	for(int i=1; i<argc; i++) {
+		if(!strcmp(argv[i], "-n") || !strcmp(argv[i], "--new-namespace")) flag_newns=1;
+		if(!strcmp(argv[i], "-E") || !strcmp(argv[i], "--ephemeral")) flag_ephemeral=1;
+		if(!strcmp(argv[i], "-R") || !strcmp(argv[i], "--rootless")) flag_rootless=1;
+		if(!strcmp(argv[i], "-P") || !strcmp(argv[i], "--protected")) flag_protected=1;
+		if(!strcmp(argv[i], "--pure")) flag_pure=1;
+	}
 
 	/* Extension 7: Smart Arg0 deduction from symlink name */
 	char *progname = strrchr(argv[0], "/");
@@ -639,6 +681,11 @@ int main(int argc, char *argv[])
 	int flag_help;
 	int flag_restrict;
 	int flag_unrestrict;
+tint flag_newns = 0;
+	int flag_ephemeral = 0;
+	int flag_rootless = 0;
+	int flag_pure = 0;
+	int flag_protected = 0;
 tint flag_newns = 0;
 tint flag_ephemeral = 0;
 	int flag_rootless = 0;
@@ -663,6 +710,10 @@ tint flag_ephemeral = 0;
 
 	if (flag_unrestrict) {
 		/* flag_unrestrict overrides else-branched restriction code */
+	if (flag_pure) {
+		unsetenv("PATH"); setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin", 1);
+		unsetenv("MANPATH"); unsetenv("INFOPATH"); unsetenv("XDG_DATA_DIRS");
+	}
 	} else if (flag_restrict && restrict_env() < 0) {
 		fprintf(stderr, "strat: unable to set restricted environment\n");
 		return 1;
@@ -671,6 +722,9 @@ tint flag_ephemeral = 0;
 		return 1;
 	}
 
+	/* Apex Security: Boundary Scrubbing & No-New-Privs */
+	unsetenv("LD_PRELOAD"); unsetenv("LD_LIBRARY_PATH");
+	if (getuid() != 0) prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
 	if (switch_stratum(param_stratum) < 0) {
 		return 1;
 	}
@@ -690,6 +744,9 @@ tint flag_ephemeral = 0;
 	if (cap_set_proc(empty_caps) != 0) {
 		perror("strat: warning: failed to drop capabilities");
 	}
+	cap_free(empty_caps);
+	cap_t empty_caps = cap_init();
+	cap_set_proc(empty_caps);
 	cap_free(empty_caps);
 		execv_skip(file, param_arglist, CROSS_DIR);
 	} else {
@@ -724,6 +781,11 @@ tint flag_ephemeral = 0;
 	 * execv() would have taken over execution if it worked.  If we're
 	 * here, there was an error.
 	 */
+		if (errno == ENOENT && strchr(file, "/") == NULL) {
+			printf("\033[0;32m* Tip: Command not found locally. Searching strata...\033[0m\n");
+			char suggest[512]; snprintf(suggest, 512, "pmm which-packages-provide-file bin/%s 2>/dev/null", file);
+			system(suggest);
+		}
 	fprintf(stderr, "strat: could not run\n" "    %s\nfrom stratum\n    %s\n", file, param_stratum);
 	switch (errno) {
 	case EACCES:

@@ -26,6 +26,7 @@ user_interfaces["apt", "verbose"]    = ""
 # Operations which directly forward the underlying command output.
 #
 user_interfaces["apt", "install-packages"]         = "pmm install <pkgs>"
+user_interfaces["apt", "build-packages"] = "pmm build-dep <pkgs>"
 user_interfaces["apt", "reinstall-packages"]       = "pmm reinstall <pkgs>"
 user_interfaces["apt", "remove-packages-limited"]  = "pmm remove <pkgs>"
 user_interfaces["apt", "remove-packages-full"]     = "pmm purge <pkgs>"
@@ -42,6 +43,7 @@ user_interfaces["apt", "upgrade-packages-limited"] = "pmm upgrade"
 user_interfaces["apt", "upgrade-packages-full"]    = "pmm dist-upgrade/full-upgrade"
 
 implementations["apt", "install-packages"]         = "strat -r ${stratum} apt ${flags} install -- ${items}"
+implementations["apt", "build-packages"] = "strat -r ${stratum} apt ${flags} build-dep -- ${items} && strat -r ${stratum} apt ${flags} source --compile ${items}"
 implementations["apt", "reinstall-packages"]       = "strat -r ${stratum} apt ${flags} reinstall -- ${items}"
 implementations["apt", "remove-packages-limited"]  = "strat -r ${stratum} apt ${flags} remove -- ${items}"
 implementations["apt", "remove-packages-full"]     = "strat -r ${stratum} apt ${flags} purge -- ${items}"

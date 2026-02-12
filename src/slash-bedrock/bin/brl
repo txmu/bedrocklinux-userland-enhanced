@@ -19,6 +19,7 @@ print_help() {
 ${color_bedrock}Bedrock Linux${color_norm} system management and introspection.
 
 Common commands:
+  ${color_cmd}chroot    ${color_norm}Direct pure chroot into a ${color_term}stratum${color_norm}
   ${color_cmd}strat     ${color_norm}Run specified ${color_term}stratum${color_norm}'s executable
   ${color_cmd}          ${color_norm}Note: ${color_cmd}\`strat\`${color_norm} is available without the ${color_cmd}\`brl\`${color_norm} prefix
   ${color_cmd}list      ${color_norm}List ${color_term}strata${color_norm}
@@ -61,7 +62,8 @@ case "${1:-}" in
 	print_help
 	exit_success
 	;;
-"strat" | "list" | "do" | "service" | "which" | "fetch" | "import" | "remove" | "rename" | "copy" | "status" | "enable" | "disable" | "repair" | "hide" | "show" | "alias" | "deref" | "apply" | "update" | "version" | "report" | "tutorial")
+"chroot" | "strat" | "list" | "do" | "service" | "which" | "fetch" | "import" | "remove" | "rename" | "copy" | "status" | "enable" | "disable" | "repair" | "hide" | "show" | "alias" | "deref" | "apply" | "update" | "version" | "report" | "tutorial")
+t"chroot") backend="/bedrock/bin/brl-chroot" ;;
 	backend="/bedrock/libexec/brl-${1}"
 	shift
 	exec "${backend}" "${@}"

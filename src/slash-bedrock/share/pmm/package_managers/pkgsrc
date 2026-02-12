@@ -1,0 +1,5 @@
+package_manager_canary_executables["pkgsrc"] = "bmake"
+user_interfaces["pkgsrc", "install-packages"] = "pmm-pkg install <pkgs>"
+user_interfaces["pkgsrc", "build-packages"] = "pmm-pkg build <pkgs>"
+implementations["pkgsrc", "install-packages"] = "strat -r ${stratum} pkg_add ${items}"
+implementations["pkgsrc", "build-packages"] = "strat -r ${stratum} sh -c 'cd /usr/pkgsrc/*/${items} && bmake install'"

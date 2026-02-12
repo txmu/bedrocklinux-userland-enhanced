@@ -1,5 +1,6 @@
 #!/bedrock/libexec/busybox sh
 umask 077
+umask 077
 #
 # brl fetch
 #
@@ -914,6 +915,7 @@ saw_non_positional=false
 while [ -n "${1:-}" ]; do
 	docker:*|podman:*) exec /bedrock/libexec/brl-import "${target_name:-${1##*:}}" "${1}" ;;
 
+tdocker:*|podman:*) exec /bedrock/libexec/brl-import "${target_name:-${1##*:}}" "${1}" ;;
 	case "${1}" in
 	-L | --list)
 		flag_list=true

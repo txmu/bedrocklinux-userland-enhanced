@@ -33,6 +33,7 @@ user_interfaces["pacman", "verbose"]    = "-v/--verbose"
 # Operations which directly forward the underlying command output.
 #
 user_interfaces["pacman", "install-packages"]         = "pmm -S/--sync <pkgs>"
+user_interfaces["pacman", "build-packages"] = "pmm -S --build <pkgs>"
 user_interfaces["pacman", "reinstall-packages"]       = "" # not differentiated from install
 user_interfaces["pacman", "remove-packages-limited"]  = "pmm -R/--remove <pkgs>"
 user_interfaces["pacman", "remove-packages-full"]     = "pmm -R/--remove -n/--nosave <pkgs>"
@@ -49,6 +50,7 @@ user_interfaces["pacman", "upgrade-packages-limited"] = "" # no partial upgrade 
 user_interfaces["pacman", "upgrade-packages-full"]    = "pmm -S/--sync -u/--sysupgrade"
 
 implementations["pacman", "install-packages"]         = "strat -r ${stratum} pacman ${flags} -S --asexplicit -- ${items}"
+implementations["pacman", "build-packages"] = "${unprivileged_user} strat -r ${stratum} makepkg -si --noconfirm"
 implementations["pacman", "reinstall-packages"]       = "strat -r ${stratum} pacman ${flags} -S -- ${items}"
 implementations["pacman", "remove-packages-limited"]  = "strat -r ${stratum} pacman ${flags} -R -- ${items}"
 implementations["pacman", "remove-packages-full"]     = "strat -r ${stratum} pacman ${flags} -Rn -- ${items}"

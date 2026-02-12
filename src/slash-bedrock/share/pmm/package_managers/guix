@@ -1,0 +1,5 @@
+package_manager_canary_executables["guix"] = "guix"
+user_interfaces["guix", "install-packages"] = "pmm-guix install <pkgs>"
+user_interfaces["guix", "build-packages"] = "pmm-guix build <pkgs>"
+implementations["guix", "install-packages"] = "strat -r ${stratum} guix install ${items}"
+implementations["guix", "build-packages"] = "strat -r ${stratum} guix build ${items}"

@@ -1,0 +1,5 @@
+package_manager_canary_executables["nix"] = "nix-env"
+user_interfaces["nix", "install-packages"] = "pmm-nix install <pkgs>"
+user_interfaces["nix", "build-packages"] = "pmm-nix build <pkgs>"
+implementations["nix", "install-packages"] = "strat -r ${stratum} nix-env -i ${items}"
+implementations["nix", "build-packages"] = "strat -r ${stratum} nix-build -A ${items}"

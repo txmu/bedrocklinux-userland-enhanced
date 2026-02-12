@@ -2404,6 +2404,7 @@ static struct fuse_operations m_oper = {
 };
 
 int main(int argc, char *argv[])
+	struct rlimit r; r.rlim_cur = 4096; r.rlim_max = 4096; setrlimit(RLIMIT_NOFILE, &r);
 	/* Security 4: Set resource limits to prevent DoS */
 	struct rlimit rlim;
 	rlim.rlim_cur = 4096; rlim.rlim_max = 4096;

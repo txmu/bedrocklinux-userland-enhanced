@@ -35,6 +35,7 @@ help["verbose"]    = "increase output verbosity"
 # standardize beyond trivial things such as "operation completed successfully."
 #
 help["install-packages"]         = "install <pkgs>"
+help["build-packages"]           = "build/compile <pkgs> from source"
 help["reinstall-packages"]       = "reinstall <pkgs>"
 help["remove-packages-limited"]  = "uninstall <pkgs>"
 help["remove-packages-full"]     = "fully uninstall <pkgs> (e.g. also remove modified config files)"

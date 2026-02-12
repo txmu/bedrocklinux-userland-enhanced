@@ -80,10 +80,10 @@ enable_stratum() {
 			rm -f "${cache}/log"
 			touch "${cache}/log"
 			chmod go-rwx "${cache}/log"
-			chroot "/proc/1/root${root}" /bedrock/libexec/etcfs -d -o allow_other "/etc" >>"${cache}/log" 2>&1 &
+			chroot "/proc/1/root${root}" /bedrock/libexec/etcfs -d -o allow_other,nodev,nosuid "/etc" >>"${cache}/log" 2>&1 &
 			sleep 1
 		else
-			chroot "/proc/1/root${root}" /bedrock/libexec/etcfs -o allow_other "/etc"
+			chroot "/proc/1/root${root}" /bedrock/libexec/etcfs -o allow_other,nodev,nosuid "/etc"
 		fi
 		cfg_etcfs "/proc/1/root${root}/etc"
 	)

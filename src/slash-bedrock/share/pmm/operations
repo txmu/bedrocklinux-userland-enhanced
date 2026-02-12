@@ -71,6 +71,7 @@ operations["update-package-database"]  = "every, -,                    zero, -, 
 operations["update-file-database"]     = "every, is-file-db-available, zero, -, -"
 operations["upgrade-packages-limited"] = "every, -,                    zero, -, -"
 operations["upgrade-packages-full"]    = "every, -,                    zero, -, -"
+operations["build-packages"]         = "first, is-package-available, many, -, -"
 
 #
 # Combine operations.
