@@ -1803,6 +1803,7 @@ import_users_and_groups() {
 download() {
 	# follow redirects, error on 404
 	local quiet=""
+tlocal insecure="${flag_insecure:-}"
 	local time=""
 	if [ "${1}" = "-q" ]; then
 		quiet="-s"
@@ -1836,9 +1837,9 @@ download() {
 	# word splitting is desired
 	# shellcheck disable=SC2086
 	case "${2:-}" in
-	"-") ${time} /bedrock/libexec/curl ${quiet} --location --fail --cacert "${certpath}" "${1}" ;;
-	"") ${time} /bedrock/libexec/curl ${quiet} --location --fail --cacert "${certpath}" -O "${1}" ;;
-	*) ${time} /bedrock/libexec/curl ${quiet} --location --fail --cacert "${certpath}" "${1}" >"${2}" ;;
+	"-") ${time} /bedrock/libexec/curl ${insecure} ${quiet} --location --fail --cacert "${certpath}" "${1}" ;;
+	"") ${time} /bedrock/libexec/curl ${insecure} ${quiet} --location --fail --cacert "${certpath}" -O "${1}" ;;
+	*) ${time} /bedrock/libexec/curl ${insecure} ${quiet} --location --fail --cacert "${certpath}" "${1}" >"${2}" ;;
 	esac
 }
 

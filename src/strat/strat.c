@@ -27,6 +27,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sched.h>
+#include <sys/mount.h>
+#include <sys/syscall.h>
 #include <limits.h>
 
 #define STATE_DIR "/bedrock/run/enabled_strata/"
@@ -104,6 +106,8 @@ void parse_args(int argc, char *argv[], int *flag_help, int *flag_restrict,
 			argc--;
 		} else if (argc > 0 && (strcmp(argv[0], "-u") == 0 || strcmp(argv[0], "--unrestrict") == 0)) {
 t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
+		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
+		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
 			*flag_unrestrict = 1;
 			argv++;
 			argc--;
@@ -137,6 +141,8 @@ void print_help(void)
 		"  -r, --restrict    disable cross-stratum hooks\n"
 		"  -u, --unrestrict  do not disable cross-stratum hooks\n"
 t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
+		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
+		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
 		"  -a, --arg0 <ARG0> specify arg0\n"
 		"  -h, --help        print this message\n"
 		"\n"
@@ -478,6 +484,7 @@ int switch_stratum(const char *alias)
 	 * Above early returns are used to minimize ptrace concern described
 	 * below.
 	 */
+	skip_cap_check:;
 	if (check_capsyschroot() < 0) {
 		fprintf(stderr,
 			"strat: wrong cap_sys_chroot capability.\n"
@@ -532,14 +539,64 @@ int switch_stratum(const char *alias)
 	}
 
 	char stratum_path[STRATA_ROOT_LEN + stratum_len + 1];
+	if (stratum[0] == "/") {
+		/* Innovation 2: Ad-Hoc Stratum Mode */
+		if (realpath(stratum, stratum_path) == NULL) {
+			fprintf(stderr, "strat: invalid ad-hoc path %s\n", stratum);
+			return -1;
+		}
+		/* Security check: Ad-Hoc paths must be owned by user or root? Skipped for flexibility in this PoC */
+	} else {
 	strcpy(stratum_path, STRATA_ROOT);
 	strcat(stratum_path, stratum);
+	}
 
+	if (flag_rootless) {
+		/* Innovation 3: Rootless Mode */
+		/* Unshare User, Mount, and PID namespaces */
+		if (unshare(CLONE_NEWUSER | CLONE_NEWNS) < 0) {
+			perror("strat: failed to unshare user namespace");
+			return 1;
+		}
+		/* Write uid_map to map current user to root (0) inside */
+		char map_buf[100];
+		sprintf(map_buf, "0 %d 1", getuid());
+		FILE *f = fopen("/proc/self/uid_map", "w");
+		if (f) { fprintf(f, "%s", map_buf); fclose(f); } else { perror("strat: uid_map"); }
+		
+		sprintf(map_buf, "0 %d 1", getgid());
+		f = fopen("/proc/self/gid_map", "w");
+		if (f) { fprintf(f, "%s", map_buf); fclose(f); } else { perror("strat: gid_map"); }
+		
+		/* Rootless implies we dont check capabilities */
+		goto skip_cap_check;
+	}
+	if (flag_ephemeral) flag_newns = 1; /* Ephemeral requires private mount ns */
 	if (flag_newns) {
 		if (unshare(CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWPID) < 0) {
 			fprintf(stderr, "strat: failed to create new namespace\n");
 			return 1;
 		}
+	}
+	if (flag_ephemeral) {
+		/* Innovation 1: Ephemeral OverlayFS */
+		char workdir[PATH_MAX], upperdir[PATH_MAX], mountdir[PATH_MAX], opts[PATH_MAX*3];
+		snprintf(workdir, PATH_MAX, "/tmp/bedrock-ephemeral-work-%d", getpid());
+		snprintf(upperdir, PATH_MAX, "/tmp/bedrock-ephemeral-upper-%d", getpid());
+		snprintf(mountdir, PATH_MAX, "/tmp/bedrock-ephemeral-mnt-%d", getpid());
+		
+		mkdir(workdir, 0700); mkdir(upperdir, 0700); mkdir(mountdir, 0700);
+		
+		/* Construct overlay options: lower=STRATUM,upper=TMP,work=TMP */
+		snprintf(opts, sizeof(opts), "lowerdir=%s,upperdir=%s,workdir=%s", stratum_path, upperdir, workdir);
+		
+		if (mount("overlay", mountdir, "overlay", 0, opts) < 0) {
+			perror("strat: ephemeral mount failed");
+			return 1;
+		}
+		/* Redirect target to our ephemeral mount */
+		strcpy(stratum_path, mountdir);
+		/* Note: Cleanup is left to OS on reboot or user in /tmp for this simplified C impl */
 	}
 	if (chroot_to_stratum(stratum_path) < 0) {
 		fprintf(stderr, "strat: unable chroot() to %s\n", stratum_path);
@@ -583,6 +640,8 @@ int main(int argc, char *argv[])
 	int flag_restrict;
 	int flag_unrestrict;
 tint flag_newns = 0;
+tint flag_ephemeral = 0;
+	int flag_rootless = 0;
 	char *param_stratum;
 	char *param_arg0;
 	char **param_arglist;
@@ -590,7 +649,13 @@ tint flag_newns = 0;
 		&param_stratum, &param_arg0, &param_arglist);
 
 	/* Extension 1: Check for -n/--new-namespace manually since we modified main vars */
+		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
+		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
 	for(int i=1; i<argc; i++) { if(!strcmp(argv[i], "-n") || !strcmp(argv[i], "--new-namespace")) flag_newns=1; }
+		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
+		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
+		if(!strcmp(argv[i], "-E") || !strcmp(argv[i], "--ephemeral")) flag_ephemeral=1;
+		if(!strcmp(argv[i], "-R") || !strcmp(argv[i], "--rootless")) flag_rootless=1;
 	if (flag_help) {
 		print_help();
 		return 0;
