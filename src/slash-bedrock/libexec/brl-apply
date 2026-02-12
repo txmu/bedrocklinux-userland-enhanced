@@ -258,10 +258,15 @@ EOF
 cfg_crossfs "/proc/1/root/bedrock/strata/bedrock/bedrock/cross"
 
 # configure etcfs
+# Parallelize this loop for performance
 for stratum in $(/bedrock/bin/brl list -ei); do
-	root="$(stratum_root "${stratum}")"
-	cfg_etcfs "/proc/1/root${root}/etc"
+	(
+		root="$(stratum_root "${stratum}")"
+		cfg_etcfs "/proc/1/root${root}/etc"
+	) &
 done
+wait
+
 
 # Configure cross firmware.
 if [ -w /sys/module/firmware_class/parameters/path ] && [ -d /bedrock/cross/firmware ]; then

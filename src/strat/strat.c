@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <sys/xattr.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #define STATE_DIR "/bedrock/run/enabled_strata/"
 #define STATE_DIR_LEN strlen(STATE_DIR)

@@ -413,6 +413,16 @@ struct h_str {
 /*
  * Hash table entry for a key-value pair
  */
+/* Negative cache entry */
+struct neg_cache {
+	UT_hash_handle hh;
+	time_t timestamp;
+	char path[];
+};
+static struct neg_cache *neg_cache_head = NULL;
+static pthread_rwlock_t neg_cache_lock;
+#define NEG_CACHE_TTL 2 // seconds
+
 struct h_kv {
 	UT_hash_handle hh;
 	char *value;
@@ -588,8 +598,43 @@ static inline struct stratum *deref(struct back_entry *back)
 /*
  * Classify an incoming file path into one of ipath_class.
  */
+static int check_neg_cache(const char *path) {
+	struct neg_cache *s;
+	int found = 0;
+	time_t now = time(NULL);
+	pthread_rwlock_rdlock(&neg_cache_lock);
+	HASH_FIND_STR(neg_cache_head, path, s);
+	if (s) {
+		if (now - s->timestamp < NEG_CACHE_TTL) found = 1;
+		else {
+			/* Lazy expire would need wrlock upgrade, skip for simplicity/speed in read path */
+		}
+	}
+	pthread_rwlock_unlock(&neg_cache_lock);
+	return found;
+}
+
+static void add_neg_cache(const char *path) {
+	struct neg_cache *s;
+	time_t now = time(NULL);
+	pthread_rwlock_wrlock(&neg_cache_lock);
+	HASH_FIND_STR(neg_cache_head, path, s);
+	if (s == NULL) {
+		s = malloc(sizeof(struct neg_cache) + strlen(path) + 1);
+		if (s) {
+			strcpy(s->path, path);
+			s->timestamp = now;
+			HASH_ADD_STR(neg_cache_head, path, s);
+		}
+	} else {
+		s->timestamp = now;
+	}
+	pthread_rwlock_unlock(&neg_cache_lock);
+}
+
 static inline enum ipath_class classify_ipath(const char *ipath, size_t ipath_len, struct cfg_entry **cfg)
 {
+	if (check_neg_cache(ipath)) add_neg_cache(ipath); return CLASS_ENOENT;
 	/*
 	 * In the most performance sensitive situations, CLASS_PATH is the most
 	 * common possibility.  Thus, check for it first.
@@ -620,7 +665,7 @@ static inline enum ipath_class classify_ipath(const char *ipath, size_t ipath_le
 		return CLASS_LOCAL;
 	}
 
-	return CLASS_ENOENT;
+	add_neg_cache(ipath); return CLASS_ENOENT;
 }
 
 /*
@@ -2372,6 +2417,7 @@ int main(int argc, char *argv[])
 	 * Initialize mutexes
 	 */
 	if (pthread_rwlock_init(&cfg_lock, NULL) < 0 || pthread_mutex_init(&root_lock, NULL) < 0) {
+	if (pthread_rwlock_init(&neg_cache_lock, NULL) < 0) return 1;
 		fprintf(stderr, "crossfs: error initializing mutexes\n");
 		return 1;
 	}
