@@ -38,6 +38,30 @@ run with `-r` or `--restrict`.  For example:
 
     strat --restrict arch makepkg
 
+Ad-Hoc Mode (Experimental)
+--------------------------
+
+In addition to registered strata names, `strat` accepts an absolute path to a
+root filesystem directory. This is known as "Ad-Hoc Mode".
+
+    strat /mnt/arch-rootfs /bin/bash
+
+**WARNING: This feature is a Proof-of-Concept (PoC).**
+
+Please be aware of the following critical caveats before use:
+
+1.  **Security Risks:** This mode skips standard security checks (such as
+    verifying directory ownership). Using this on untrusted directories may
+    lead to privilege escalation or security escapes.
+2.  **Ecosystem Incompatibility:** Ad-Hoc paths are not registered in the
+    Bedrock database. Consequently, tools like `brl list`, `brl which`, and
+    the Package Manager Manager (`pmm`) will **not** work correctly inside
+    or against an ad-hoc environment.
+3.  **Configuration Bypass:** Global configuration in `/bedrock/etc/bedrock.conf`
+    (e.g., restrictions, cross-stratum configuration) is bypassed.
+
+Use this mode strictly for development, debugging, or recovery purposes.
+
 Installation
 ------------
 

@@ -145,7 +145,7 @@ t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
 void print_help(void)
 {
 	printf(""
-		"Usage: strat [options] <stratum> <command>\n"
+		"Usage: strat [options] <stratum|path> <command>\n"
 		"\n"
 		"Options:\n"
 		"  -r, --restrict    disable cross-stratum hooks\n"
@@ -170,7 +170,9 @@ t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
 		"  Run debian's make restricted to only debian's files:\n"
 		"  $ strat -r debian make\n"
 		"  By default makepkg is restricted.\n"
-		"  Run arch's makepkg without restricting it to arch's files:\n" "  $ strat -u arch makepkg\n");
+		"  Run arch's makepkg without restricting it to arch's files:\n" "  $ strat -u arch makepkg\n"
+		"  Ad-Hoc Mode (Experimental):\n"
+		"  $ strat /mnt/rootfs /bin/bash (See README for security caveats)\n");
 }
 
 /*
