@@ -41,15 +41,15 @@ user_interfaces["apk", "update-file-database"]     = "" # file search command do
 user_interfaces["apk", "upgrade-packages-limited"] = "" # no limited upgrade concept
 user_interfaces["apk", "upgrade-packages-full"]    = "pmm upgrade"
 
-implementations["apk", "install-packages"]         = "strat -r ${stratum} apk ${flags} add ${items}"
-implementations["apk", "reinstall-packages"]       = "strat -r ${stratum} apk ${flags} fix -r ${items}"
-implementations["apk", "remove-packages-limited"]  = "strat -r ${stratum} apk ${flags} del ${items}"
-implementations["apk", "remove-packages-full"]     = "strat -r ${stratum} apk ${flags} del --purge ${items}"
+implementations["apk", "install-packages"]         = "strat -r ${stratum} apk ${flags} add -- ${items}"
+implementations["apk", "reinstall-packages"]       = "strat -r ${stratum} apk ${flags} fix -r -- ${items}"
+implementations["apk", "remove-packages-limited"]  = "strat -r ${stratum} apk ${flags} del -- ${items}"
+implementations["apk", "remove-packages-full"]     = "strat -r ${stratum} apk ${flags} del --purge -- ${items}"
 implementations["apk", "verify-packages"]          = "" # could not find operation in package manager documentation
 implementations["apk", "verify-all-packages"]      = "strat -r ${stratum} apk ${flags} audit --system --check-permissions"
-implementations["apk", "mark-packages-explicit"]   = "strat -r ${stratum} apk ${flags} add ${items}"
-implementations["apk", "mark-packages-implicit"]   = "strat -r ${stratum} apk ${flags} del ${items}"
-implementations["apk", "show-package-information"] = "strat -r ${stratum} apk ${flags} info ${items}"
+implementations["apk", "mark-packages-explicit"]   = "strat -r ${stratum} apk ${flags} add -- ${items}"
+implementations["apk", "mark-packages-implicit"]   = "strat -r ${stratum} apk ${flags} del -- ${items}"
+implementations["apk", "show-package-information"] = "strat -r ${stratum} apk ${flags} info -- ${items}"
 implementations["apk", "clear-cache"]              = "" # could not find operation in package manager documentation
 implementations["apk", "remove-orphans"]           = "" # implicit with apk del
 implementations["apk", "update-package-database"]  = "strat -r ${stratum} apk ${flags} update"
@@ -81,9 +81,9 @@ user_interfaces["apk", "update-package-database,update-file-database,upgrade-pac
 user_interfaces["apk", "update-package-database,update-file-database,upgrade-packages-full,install-packages"]    = ""
 
 implementations["apk", "clear-cache,remove-orphans"]                                                             = ""
-implementations["apk", "mark-packages-implicit,remove-orphans"]                                                  = "strat -r ${stratum} apk ${flags} del ${items}"
-implementations["apk", "remove-packages-limited,remove-orphans"]                                                 = "strat -r ${stratum} apk ${flags} del ${items}"
-implementations["apk", "remove-packages-full,remove-orphans"]                                                    = "strat -r ${stratum} apk ${flags} del --purge ${items}"
+implementations["apk", "mark-packages-implicit,remove-orphans"]                                                  = "strat -r ${stratum} apk ${flags} del -- ${items}"
+implementations["apk", "remove-packages-limited,remove-orphans"]                                                 = "strat -r ${stratum} apk ${flags} del -- ${items}"
+implementations["apk", "remove-packages-full,remove-orphans"]                                                    = "strat -r ${stratum} apk ${flags} del --purge -- ${items}"
 implementations["apk", "update-package-database,update-file-database"]                                           = "strat -r ${stratum} apk ${flags} update"
 implementations["apk", "update-package-database,upgrade-packages-partial"]                                       = ""
 implementations["apk", "update-package-database,upgrade-packages-full"]                                          = ""
@@ -113,7 +113,7 @@ user_interfaces["apk", "search-for-package-by-all"]    = "pmm search <text>"
 user_interfaces["apk", "which-package-owns-file"]      = "pmm info -W/--who-owns <file>"
 user_interfaces["apk", "which-packages-provide-file"]  = "pmm-file <file>"
 
-implementations["apk", "list-installed-package-files"] = "strat -r ${stratum} apk info -L ${items} | grep -v ' contains:$'"
+implementations["apk", "list-installed-package-files"] = "strat -r ${stratum} apk info -L -- ${items} | grep -v ' contains:$'"
 implementations["apk", "list-installed-explicit"]      = "cat /bedrock/strata/${stratum}/etc/apk/world"
 implementations["apk", "list-installed-implicit"]      = "strat -r ${stratum} apk info |\
 	awk 'BEGIN {\
@@ -127,10 +127,10 @@ implementations["apk", "list-installed-implicit"]      = "strat -r ${stratum} ap
 	}'"
 implementations["apk", "list-installed-packages"]      = "strat -r ${stratum} apk info"
 implementations["apk", "list-available-packages"]      = "strat -r ${stratum} apk list | awk '{sub(/-[^-]*-[^-]*$/, \"\", $1); print $1}'"
-implementations["apk", "search-for-package-by-name"]   = "strat -r ${stratum} apk search | sed 's/-[^-]*-[^-]*$//' | grep ${items}"
-implementations["apk", "search-for-package-by-all"]    = "strat -r ${stratum} apk search ${items} | sed 's/-[^-]*-[^-]*$//'"
-implementations["apk", "which-package-owns-file"]      = "strat -r ${stratum} apk info -W ${items} 2>/dev/null | awk '{sub(/-[^-]*-[^-]*$/, \"\"); print $NF}'"
-implementations["apk", "which-packages-provide-file"]  = "strat -r ${stratum} apk-file ${items} |\
+implementations["apk", "search-for-package-by-name"]   = "strat -r ${stratum} apk search | sed 's/-[^-]*-[^-]*$//' | grep -- ${items}"
+implementations["apk", "search-for-package-by-all"]    = "strat -r ${stratum} apk search -- ${items} | sed 's/-[^-]*-[^-]*$//'"
+implementations["apk", "which-package-owns-file"]      = "strat -r ${stratum} apk info -W -- ${items} 2>/dev/null | awk '{sub(/-[^-]*-[^-]*$/, \"\"); print $NF}'"
+implementations["apk", "which-packages-provide-file"]  = "strat -r ${stratum} apk-file -- ${items} |\
 	# dedup repeats\
 	awk '\
 	/^[\\/]/ {\
@@ -145,9 +145,9 @@ implementations["apk", "which-packages-provide-file"]  = "strat -r ${stratum} ap
 #
 # Internal pmm operations.
 #
-implementations["apk", "is-package-installed"]               = "strat -r ${stratum} apk info -e ${items} >/dev/null 2>&1"
-implementations["apk", "is-package-available"]               = "strat -r ${stratum} apk info ${items} >/dev/null 2>&1"
+implementations["apk", "is-package-installed"]               = "strat -r ${stratum} apk info -e -- ${items} >/dev/null 2>&1"
+implementations["apk", "is-package-available"]               = "strat -r ${stratum} apk info -- ${items} >/dev/null 2>&1"
 implementations["apk", "is-file-db-available"]               = "strat -r ${stratum} apk info -e apk-file >/dev/null 2>&1"
 implementations["apk", "print-file-db-install-instructions"] = "echo \"Install apk-file from apk community repo in ${stratum}:apk to perform file-db operations\""
-implementations["apk", "print-package-version"]              = "strat -r ${stratum} apk info ${items} | awk -F'[ -]' '{print$(NF-2);exit}'"
+implementations["apk", "print-package-version"]              = "strat -r ${stratum} apk info -- ${items} | awk -F'[ -]' '{print$(NF-2);exit}'"
 implementations["apk", "cache-package-db"]                   = "strat -r ${stratum} apk list | sed 's/-\\([^-]*\\)-[^-]* .*$/\t\\1/'"

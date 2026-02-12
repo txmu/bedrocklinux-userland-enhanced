@@ -1,0 +1,36 @@
+#!/bedrock/libexec/busybox awk -f
+#
+# Package Manager Manager Flatpak support script
+#
+# Copyright (c) 2024 Bedrock Linux Community
+#
+
+# Flatpak is treated as a system-level supplementary package manager
+system_package_managers["flatpak"]
+package_manager_canary_executables["flatpak"] = "flatpak"
+
+# Flag mappings
+user_interfaces["flatpak", "assume-yes"] = "-y"
+user_interfaces["flatpak", "quiet"]      = ""
+user_interfaces["flatpak", "verbose"]    = "-v"
+
+# Operation mappings
+user_interfaces["flatpak", "install-packages"]         = "pmm install <pkgs>"
+user_interfaces["flatpak", "remove-packages-limited"]  = "pmm uninstall <pkgs>"
+user_interfaces["flatpak", "search-for-package-by-name"] = "pmm search <text>"
+user_interfaces["flatpak", "list-installed-packages"]  = "pmm list --installed"
+user_interfaces["flatpak", "update-package-database"]  = "pmm update"
+user_interfaces["flatpak", "upgrade-packages-full"]    = "pmm upgrade"
+
+# Implementation logic
+# Note: Flatpak requires a user environment, usually best run where DBus variables are exported
+implementations["flatpak", "install-packages"]         = "strat -r ${stratum} flatpak install -y -- ${items}"
+implementations["flatpak", "remove-packages-limited"]  = "strat -r ${stratum} flatpak uninstall -y -- ${items}"
+implementations["flatpak", "search-for-package-by-name"] = "strat -r ${stratum} flatpak search -- ${items} | awk '{print $1}'"
+implementations["flatpak", "list-installed-packages"]  = "strat -r ${stratum} flatpak list --app --columns=application"
+implementations["flatpak", "update-package-database"]  = "strat -r ${stratum} flatpak update --appstream"
+implementations["flatpak", "upgrade-packages-full"]    = "strat -r ${stratum} flatpak update -y"
+
+# Internal checks
+implementations["flatpak", "is-package-installed"]     = "strat -r ${stratum} flatpak info -- ${items} >/dev/null 2>&1"
+implementations["flatpak", "is-package-available"]     = "strat -r ${stratum} flatpak search -- ${items} >/dev/null 2>&1"

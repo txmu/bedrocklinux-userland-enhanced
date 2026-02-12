@@ -1,0 +1,53 @@
+#!/bedrock/libexec/busybox sh
+. /bedrock/share/common-code
+
+[ "$#" -lt 3 ] && { 
+    printf "Usage: ${color_cmd}brl service ${color_sub}<stratum> <service> <action>${color_norm}\n"
+    printf "Supported Init Systems: systemd, openrc, runit, s6, upstart, busybox, ninit, simpleinit, sysv\n"
+    exit 1 
+}
+
+STRATUM="$1"; SERVICE="$2"; ACTION="$3"
+
+detect_init() {
+    if /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v systemctl" >/dev/null 2>&1; then echo "systemd"
+    elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v rc-service" >/dev/null 2>&1; then echo "openrc"
+    elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v sv" >/dev/null 2>&1; then echo "runit"
+    elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v s6-svc" >/dev/null 2>&1; then echo "s6"
+    elif /bedrock/bin/strat -r "${STRATUM}" /bedrock/libexec/busybox sh -c "command -v initctl" >/dev/null 2>&1; then echo "upstart"
+    elif /bedrock/bin/strat -r "${STRATUM}" test -x /sbin/ninit; then echo "ninit"
+    elif /bedrock/bin/strat -r "${STRATUM}" test -x /sbin/simpleinit; then echo "simpleinit"
+    elif /bedrock/bin/strat -r "${STRATUM}" test -x /bin/busybox && /bedrock/bin/strat -r "${STRATUM}" test -d /etc/init.d; then echo "busybox"
+    else echo "sysv"; fi
+}
+
+INIT_TYPE=$(detect_init)
+case "${INIT_TYPE}" in
+    "systemd") exec /bedrock/bin/strat "${STRATUM}" systemctl "${ACTION}" "${SERVICE}" ;;
+    "openrc")
+        case "${ACTION}" in
+            "enable")  exec /bedrock/bin/strat "${STRATUM}" rc-update add "${SERVICE}" default ;;
+            "disable") exec /bedrock/bin/strat "${STRATUM}" rc-update del "${SERVICE}" default ;;
+            *)         exec /bedrock/bin/strat "${STRATUM}" rc-service "${SERVICE}" "${ACTION}" ;;
+        esac ;;
+    "runit")
+        case "${ACTION}" in
+            "start")   exec /bedrock/bin/strat "${STRATUM}" sv up "${SERVICE}" ;;
+            "stop")    exec /bedrock/bin/strat "${STRATUM}" sv down "${SERVICE}" ;;
+            "restart") exec /bedrock/bin/strat "${STRATUM}" sv restart "${SERVICE}" ;;
+            "status")  exec /bedrock/bin/strat "${STRATUM}" sv status "${SERVICE}" ;;
+        esac ;;
+    "s6")
+        case "${ACTION}" in
+            "start")   exec /bedrock/bin/strat "${STRATUM}" s6-svc -u "/run/service/${SERVICE}" ;;
+            "stop")    exec /bedrock/bin/strat "${STRATUM}" s6-svc -d "/run/service/${SERVICE}" ;;
+            "status")  exec /bedrock/bin/strat "${STRATUM}" s6-svstat "/run/service/${SERVICE}" ;;
+        esac ;;
+    "upstart") exec /bedrock/bin/strat "${STRATUM}" initctl "${ACTION}" "${SERVICE}" ;;
+    *)
+        if /bedrock/bin/strat -r "${STRATUM}" test -x "/etc/init.d/${SERVICE}"; then
+            exec /bedrock/bin/strat "${STRATUM}" "/etc/init.d/${SERVICE}" "${ACTION}"
+        else
+            exec /bedrock/bin/strat "${STRATUM}" service "${SERVICE}" "${ACTION}"
+        fi ;;
+esac

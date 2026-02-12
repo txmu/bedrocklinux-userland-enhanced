@@ -139,7 +139,7 @@ ARCH_BIT_DEPTH=$(shell ./detect_arch.sh | awk 'NR==3')
 RELEASE=Bedrock Linux $(BEDROCK_VERSION) $(CODENAME)
 INSTALLER=bedrock-linux-$(BEDROCK_VERSION)-$(ARCHITECTURE).sh
 
-RELEASE_CFLAGS=-O2
+RELEASE_CFLAGS=-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE -pie -Wl,-z,relro,-z,now
 
 ROOT=$(shell pwd)
 BUILD=$(ROOT)/build/$(ARCHITECTURE)

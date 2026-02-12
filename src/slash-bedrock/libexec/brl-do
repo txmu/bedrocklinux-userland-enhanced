@@ -1,0 +1,25 @@
+#!/bedrock/libexec/busybox sh
+. /bedrock/share/common-code
+FILTER_NAME=""; ONLY_INIT=false; PARALLEL=false
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -n|--name) shift; FILTER_NAME="$1" ;;
+        --init) ONLY_INIT=true ;;
+        -p|--parallel) PARALLEL=true ;;
+        --) shift; break ;;
+        *) break ;;
+    esac
+    shift
+done
+COMMAND="$*"
+[ -z "$COMMAND" ] && exit 1
+INIT_STRAT=$(/bedrock/bin/brl deref init)
+for s in $(/bedrock/bin/brl list -e); do
+    if $ONLY_INIT && [ "$s" != "$INIT_STRAT" ]; then continue; fi
+    if [ "$s" = "bedrock" ]; then continue; fi
+    if [ -n "$FILTER_NAME" ] && ! echo "$s" | grep -qE "$FILTER_NAME"; then continue; fi
+    printf "${color_strat}[%s]${color_norm} Executing: %s\n" "$s" "$COMMAND"
+    if $PARALLEL; then /bedrock/bin/strat "$s" /bin/sh -c "$COMMAND" &
+    else /bedrock/bin/strat "$s" /bin/sh -c "$COMMAND"; fi
+done
+if $PARALLEL; then wait; fi

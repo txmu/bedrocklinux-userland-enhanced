@@ -53,15 +53,15 @@ user_interfaces["portage", "update-file-database"]     = "" # file search comman
 user_interfaces["portage", "upgrade-packages-limited"] = "pmm -u/--update -D/--deep @world"
 user_interfaces["portage", "upgrade-packages-full"]    = "pmm -u/--update -D/--deep -N/--newuse @world"
 
-implementations["portage", "install-packages"]         = "strat -r ${stratum} emerge ${flags} ${items}"
-implementations["portage", "reinstall-packages"]       = "strat -r ${stratum} emerge ${flags} ${items}"
-implementations["portage", "remove-packages-limited"]  = "strat -r ${stratum} emerge ${flags} -c ${items}"
-implementations["portage", "remove-packages-full"]     = "strat -r ${stratum} emerge ${flags} -c ${items}"
-implementations["portage", "verify-packages"]          = "strat -r ${stratum} qcheck ${items}"
+implementations["portage", "install-packages"]         = "strat -r ${stratum} emerge ${flags} -- ${items}"
+implementations["portage", "reinstall-packages"]       = "strat -r ${stratum} emerge ${flags} -- ${items}"
+implementations["portage", "remove-packages-limited"]  = "strat -r ${stratum} emerge ${flags} -c -- ${items}"
+implementations["portage", "remove-packages-full"]     = "strat -r ${stratum} emerge ${flags} -c -- ${items}"
+implementations["portage", "verify-packages"]          = "strat -r ${stratum} qcheck -- ${items}"
 implementations["portage", "verify-all-packages"]      = "strat -r ${stratum} qcheck"
-implementations["portage", "mark-packages-explicit"]   = "strat -r ${stratum} emerge ${flags} -w ${items}"
-implementations["portage", "mark-packages-implicit"]   = "strat -r ${stratum} emerge ${flags} --deselect ${items}"
-implementations["portage", "show-package-information"] = "strat -r ${stratum} emerge ${flags} -s ${items}"
+implementations["portage", "mark-packages-explicit"]   = "strat -r ${stratum} emerge ${flags} -w -- ${items}"
+implementations["portage", "mark-packages-implicit"]   = "strat -r ${stratum} emerge ${flags} --deselect -- ${items}"
+implementations["portage", "show-package-information"] = "strat -r ${stratum} emerge ${flags} -s -- ${items}"
 implementations["portage", "clear-cache"]              = "strat -r ${stratum} eclean distfiles"
 implementations["portage", "remove-orphans"]           = "strat -r ${stratum} emerge ${flags} -c"
 implementations["portage", "update-package-database"]  = "strat -r ${stratum} emerge ${flags} --sync"
@@ -94,7 +94,7 @@ user_interfaces["portage", "update-package-database,update-file-database,upgrade
 
 implementations["portage", "clear-cache,remove-orphans"]                                                             = ""
 implementations["portage", "mark-packages-implicit,remove-orphans"]                                                  = ""
-implementations["portage", "remove-packages-limited,remove-orphans"]                                                 = "strat -r ${stratum} emerge ${flags} -c ${items}"
+implementations["portage", "remove-packages-limited,remove-orphans"]                                                 = "strat -r ${stratum} emerge ${flags} -c -- ${items}"
 implementations["portage", "remove-packages-full,remove-orphans"]                                                    = ""
 implementations["portage", "update-package-database,update-file-database"]                                           = ""
 implementations["portage", "update-package-database,upgrade-packages-partial"]                                       = ""
@@ -125,7 +125,7 @@ user_interfaces["portage", "search-for-package-by-all"]    = "pmm -S/--searchdes
 user_interfaces["portage", "which-package-owns-file"]      = "pmm-qfile <file>"
 user_interfaces["portage", "which-packages-provide-file"]  = "pmm-e-file <file>"
 
-implementations["portage", "list-installed-package-files"] = "strat -r ${stratum} qlist -e ${items}"
+implementations["portage", "list-installed-package-files"] = "strat -r ${stratum} qlist -e -- ${items}"
 implementations["portage", "list-installed-explicit"]      = "cat /bedrock/strata/${stratum}/var/lib/portage/world"
 implementations["portage", "list-installed-implicit"]      = "strat -r ${stratum} qlist -IC |\
 	awk 'BEGIN {\
@@ -139,10 +139,10 @@ implementations["portage", "list-installed-implicit"]      = "strat -r ${stratum
 	}'"
 implementations["portage", "list-installed-packages"]      = "strat -r ${stratum} qlist -IC"
 implementations["portage", "list-available-packages"]      = "strat -r ${stratum} qsearch -a"
-implementations["portage", "search-for-package-by-name"]   = "strat -r ${stratum} qsearch -sN ${items}"
-implementations["portage", "search-for-package-by-all"]    = "strat -r ${stratum} qsearch -sSN ${items}"
-implementations["portage", "which-package-owns-file"]      = "strat -r ${stratum} qfile -C ${items} | sed 's/: /\t/g'"
-implementations["portage", "which-packages-provide-file"]  = "strat -r ${stratum} e-file ${items} |\
+implementations["portage", "search-for-package-by-name"]   = "strat -r ${stratum} qsearch -sN -- ${items}"
+implementations["portage", "search-for-package-by-all"]    = "strat -r ${stratum} qsearch -sSN -- ${items}"
+implementations["portage", "which-package-owns-file"]      = "strat -r ${stratum} qfile -C -- ${items} | sed 's/: /\t/g'"
+implementations["portage", "which-packages-provide-file"]  = "strat -r ${stratum} e-file -- ${items} |\
 	awk '\
 		/^ [*]/ {\
 			name=$2\
@@ -158,10 +158,10 @@ implementations["portage", "which-packages-provide-file"]  = "strat -r ${stratum
 #
 # Internal pmm operations.
 #
-implementations["portage", "is-package-installed"]               = "strat -r ${stratum} qdepends -i ${items} >/dev/null 2>&1"
-implementations["portage", "is-package-available"]               = "strat -r ${stratum} portageq ${items} | grep -q ."
+implementations["portage", "is-package-installed"]               = "strat -r ${stratum} qdepends -i -- ${items} >/dev/null 2>&1"
+implementations["portage", "is-package-available"]               = "strat -r ${stratum} portageq -- ${items} | grep -q ."
 implementations["portage", "is-file-db-available"]               = "strat -r ${stratum} qdepends -i app-portage/pfl 2>/dev/null | grep -q ."
 implementations["portage", "print-file-db-install-instructions"] = "echo \"Install app-portage/pfl in ${stratum}:portage to perform file-db operations\""
-implementations["portage", "print-package-version"]              = "strat -r ${stratum} qatom $(strat -r ${stratum} portageq ${items}) | awk '{print $3;exit}'"
+implementations["portage", "print-package-version"]              = "strat -r ${stratum} qatom $(strat -r ${stratum} portageq -- ${items}) | awk '{print $3;exit}'"
 # Cache both with prefix and without prefix to ensure availability lookup works with either.
 implementations["portage", "cache-package-db"]                   = "strat -r ${stratum} qatom $(strat -r ${stratum} portageq all_best_visible /) | awk '{print $2\"\t\"$3; print $1\"/\"$2\"\t\"$3}'"

@@ -1691,11 +1691,15 @@ function execute_cmds(cmds,
 				print env""cmd >> "/tmp/bedrock-pmm-queue"
 				next
 			}
+				# Extension 3: PMM Hooks
+				system("/bedrock/libexec/busybox sh -c \"[ -x /bedrock/etc/pmm-hooks/pre-"operation" \] && /bedrock/etc/pmm-hooks/pre-"operation" \""stratum"\" \""package_manager"\" \""items"\"\"");
 			if ((package_manager, operation) in implementations) {
 				ret = run_shell(implementations[package_manager, operation], stratum, package_manager, items, 1)
 				if (ret != 0) {
 					abort(stratum":"package_manager" returned "ret)
 				}
+				# Extension 3: PMM Hooks (Post)
+				system("/bedrock/libexec/busybox sh -c \"[ -x /bedrock/etc/pmm-hooks/post-"operation" \] && /bedrock/etc/pmm-hooks/post-"operation" \""stratum"\" \""package_manager"\" \""items"\"\"");
 			} else {
 				abort("Unrecognized operation requested: \""operation"\".  Please bug report this.")
 			}
@@ -1715,12 +1719,16 @@ function execute_cmds(cmds,
 				print env""cmd >> "/tmp/bedrock-pmm-queue"
 				next
 			}
+				# Extension 3: PMM Hooks
+				system("/bedrock/libexec/busybox sh -c \"[ -x /bedrock/etc/pmm-hooks/pre-"operation" \] && /bedrock/etc/pmm-hooks/pre-"operation" \""stratum"\" \""package_manager"\" \""items"\"\"");
 			if ((package_manager, operation) in implementations) {
 				get_shell_output(implementations[package_manager, operation], stratum, package_manager, items, 1, _return, output)
 				for (o = 1; o in output; o++) {
 					if (post == "prepend-pair") {
 						print color["strat"]""stratum""color[glue]":"color["cmd"]""package_manager""color["norm"]"\t"output[o]
 					} else if (post == "prepend-full-path") {
+				# Extension 3: PMM Hooks (Post)
+				system("/bedrock/libexec/busybox sh -c \"[ -x /bedrock/etc/pmm-hooks/post-"operation" \] && /bedrock/etc/pmm-hooks/post-"operation" \""stratum"\" \""package_manager"\" \""items"\"\"");
 						if (output[o] == "") {
 							continue
 						} else if (output[o] ~ /^[^\/]/) {

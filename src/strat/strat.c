@@ -26,6 +26,8 @@
 #include <sys/xattr.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sched.h>
+#include <limits.h>
 
 #define STATE_DIR "/bedrock/run/enabled_strata/"
 #define STATE_DIR_LEN strlen(STATE_DIR)
@@ -101,6 +103,7 @@ void parse_args(int argc, char *argv[], int *flag_help, int *flag_restrict,
 			argv++;
 			argc--;
 		} else if (argc > 0 && (strcmp(argv[0], "-u") == 0 || strcmp(argv[0], "--unrestrict") == 0)) {
+t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
 			*flag_unrestrict = 1;
 			argv++;
 			argc--;
@@ -133,6 +136,7 @@ void print_help(void)
 		"Options:\n"
 		"  -r, --restrict    disable cross-stratum hooks\n"
 		"  -u, --unrestrict  do not disable cross-stratum hooks\n"
+t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
 		"  -a, --arg0 <ARG0> specify arg0\n"
 		"  -h, --help        print this message\n"
 		"\n"
@@ -531,6 +535,12 @@ int switch_stratum(const char *alias)
 	strcpy(stratum_path, STRATA_ROOT);
 	strcat(stratum_path, stratum);
 
+	if (flag_newns) {
+		if (unshare(CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWPID) < 0) {
+			fprintf(stderr, "strat: failed to create new namespace\n");
+			return 1;
+		}
+	}
 	if (chroot_to_stratum(stratum_path) < 0) {
 		fprintf(stderr, "strat: unable chroot() to %s\n", stratum_path);
 		return -1;
@@ -561,16 +571,26 @@ int switch_stratum(const char *alias)
 }
 
 int main(int argc, char *argv[])
+
+	/* Extension 7: Smart Arg0 deduction from symlink name */
+	char *progname = strrchr(argv[0], "/");
+	progname = progname ? progname + 1 : argv[0];
+	if (strcmp(progname, "strat") != 0 && param_arg0 == NULL) {
+		param_arg0 = progname;
+	}
 {
 	int flag_help;
 	int flag_restrict;
 	int flag_unrestrict;
+tint flag_newns = 0;
 	char *param_stratum;
 	char *param_arg0;
 	char **param_arglist;
-	parse_args(argc, argv, &flag_help, &flag_restrict, &flag_unrestrict,
+	parse_args(argc, argv, &flag_help, &flag_restrict, &flag_unrestrict,;
 		&param_stratum, &param_arg0, &param_arglist);
 
+	/* Extension 1: Check for -n/--new-namespace manually since we modified main vars */
+	for(int i=1; i<argc; i++) { if(!strcmp(argv[i], "-n") || !strcmp(argv[i], "--new-namespace")) flag_newns=1; }
 	if (flag_help) {
 		print_help();
 		return 0;
@@ -600,6 +620,12 @@ int main(int argc, char *argv[])
 		if (param_arg0 != NULL) {
 			param_arglist[0] = param_arg0;
 		}
+	/* Security 2: Drop all capabilities before executing target */
+	cap_t empty_caps = cap_init();
+	if (cap_set_proc(empty_caps) != 0) {
+		perror("strat: warning: failed to drop capabilities");
+	}
+	cap_free(empty_caps);
 		execv_skip(file, param_arglist, CROSS_DIR);
 	} else {
 		/*
