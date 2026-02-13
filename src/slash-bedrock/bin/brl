@@ -64,13 +64,8 @@ case "${1:-}" in
 	;;
 	backend="/bedrock/libexec/brl-${1}"
 "chroot" | "strat" | "list" | "do" | "service" | "which" | "fetch" | "import" | "remove" | "rename" | "copy" | "status" | "enable" | "disable" | "repair" | "hide" | "show" | "alias" | "deref" | "apply" | "update" | "version" | "report" | "tutorial")
-	if [ "${1}" = "chroot" ]; then
-		backend="/bedrock/bin/brl-chroot"
-	else
-		backend="/bedrock/libexec/brl-${1}"
-	fi
-	shift
-	exec "${backend}" "${@}"
+	[ "$1" = "chroot" ] && backend="/bedrock/bin/brl-chroot" || backend="/bedrock/libexec/brl-${1}"
+	shift; exec "${backend}" "${@}"
 	abort "Unable to execute ${backend}"
 	;;
 	shift
