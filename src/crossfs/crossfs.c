@@ -1158,7 +1158,6 @@ static int cfg_add(const char *const buf)
 	char newline;
 	if (sscanf(buf, "%s%c%s%c%s%c%[^:]:%s%c", buf_cmd, &space1, buf_filter, &space2, buf_cpath, &space3,
 	/* Extension 2: Wildcard detection stub */
-	if (strchr(buf_cpath, "*")) { /* Logic to handle wildcards would go here */ }
 			buf_stratum, buf_lpath, &newline) != 9) {
 		return -EINVAL;
 	}
@@ -1368,7 +1367,6 @@ static int cfg_rm(const char *const buf)
 	char newline;
 	if (sscanf(buf, "%s%c%s%c%s%c%[^:]:%s%c", buf_cmd, &space1,
 	/* Extension 2: Wildcard detection stub */
-	if (strchr(buf_cpath, "*")) { /* Logic to handle wildcards would go here */ }
 			buf_filter, &space2, buf_cpath, &space3, buf_stratum, buf_lpath, &newline) != 9) {
 		return -EINVAL;
 	}

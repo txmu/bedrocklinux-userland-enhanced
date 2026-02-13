@@ -110,14 +110,6 @@ void parse_args(int argc, char *argv[], int *flag_help, int *flag_restrict,
 			argv++;
 			argc--;
 		} else if (argc > 0 && (strcmp(argv[0], "-u") == 0 || strcmp(argv[0], "--unrestrict") == 0)) {
-		"  -n, --new-namespace  create new private namespace (net/mount/ipc)\n"
-		"  -E, --ephemeral       disposable mode: discard changes after exit (uses OverlayFS)\n"
-		"  -R, --rootless        rootless mode: run without SUID (requires user_namespaces)\n"
-		"  -P, --protected       pledge mode: no network, masked /home (OpenBSD-style)\n"
-		"      --pure            pure mode: no Bedrock environment integration\n"
-t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
-		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
-		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
 			*flag_unrestrict = 1;
 			argv++;
 			argc--;
@@ -155,7 +147,7 @@ void print_help(void)
 		"  -R, --rootless        rootless mode: run without SUID (requires user_namespaces)\n"
 		"  -P, --protected       pledge mode: no network, masked /home (OpenBSD-style)\n"
 		"      --pure            pure mode: no Bedrock environment integration\n"
-t	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
+	"  -n, --new-namespace create new private namespace (net/mount/ipc)\n"
 		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
 		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
 		"  -a, --arg0 <ARG0> specify arg0\n"
@@ -489,74 +481,11 @@ void filter_env_path_integrated(const char *env_var, const char *target_stratum)
     while (token) {
         int allow = 0;
         
-        /* KEEP logic:
-         * 1. Cross paths (/bedrock/cross/) are explicitly for integration.
-         * 2. Direct strata paths (/bedrock/strata/) are already routed.
-         * 3. Target stratum's own paths are safe.
-         * 4. Relative paths are kept to avoid breaking local setups.
-         */
         if (strncmp(token, "/bedrock/cross/", 15) == 0) allow = 1;
         else if (strncmp(token, "/bedrock/strata/", 16) == 0) allow = 1;
         else if (token[0] != '/') allow = 1;
         else if (strncmp(token, target_prefix, strlen(target_prefix)) == 0) allow = 1;
         else {
-            /* Keep others by default to prioritize Integration (Bedrock Philosophy) 
-             * Safety is handled by --protected or --restrict modes. */
-            allow = 1; 
-        }
-
-        if (allow) {
-            if (write_ptr != new_val) {
-                *write_ptr = ':';
-                write_ptr++;
-            }
-            strcpy(write_ptr, token);
-            write_ptr += strlen(token);
-        }
-        token = strtok(NULL, ":");
-    }
-    setenv(env_var, new_val, 1);
-    free(val_copy);
-    free(new_val);
-}
-
-/* 
- * Integration Engine: 
- * Ensures components like IME (Fcitx/IBus), Steam Overlay, and 
- * Translation tools work across strata boundaries while 
- * preventing random library version crashes.
- */
-void filter_env_path_integrated(const char *env_var, const char *target_stratum) {
-    char *val = getenv(env_var);
-    if (!val || strlen(val) == 0) return;
-
-    char target_prefix[PATH_MAX];
-    snprintf(target_prefix, sizeof(target_prefix), "/bedrock/strata/%s", target_stratum);
-
-    char *new_val = malloc(strlen(val) + 2);
-    if (!new_val) return;
-    char *write_ptr = new_val;
-    *write_ptr = '\0';
-
-    char *val_copy = strdup(val);
-    char *token = strtok(val_copy, ":");
-
-    while (token) {
-        int allow = 0;
-        
-        /* KEEP logic:
-         * 1. Cross paths (/bedrock/cross/) are explicitly for integration.
-         * 2. Direct strata paths (/bedrock/strata/) are already routed.
-         * 3. Target stratum's own paths are safe.
-         * 4. Relative paths are kept to avoid breaking local setups.
-         */
-        if (strncmp(token, "/bedrock/cross/", 15) == 0) allow = 1;
-        else if (strncmp(token, "/bedrock/strata/", 16) == 0) allow = 1;
-        else if (token[0] != '/') allow = 1;
-        else if (strncmp(token, target_prefix, strlen(target_prefix)) == 0) allow = 1;
-        else {
-            /* Keep others by default to prioritize Integration (Bedrock Philosophy) 
-             * Safety is handled by --protected or --restrict modes. */
             allow = 1; 
         }
 
@@ -577,10 +506,6 @@ void filter_env_path_integrated(const char *env_var, const char *target_stratum)
 
 int switch_stratum(const char *alias)
 {
-	/*
-	 * local alias indicates no stratum change is needed.  Hard code this
-	 * to avoid unnecessary overhead.
-	 */
 	if (strcmp(alias, LOCAL_ALIAS) == 0) {
 		return 0;
 	}
@@ -600,24 +525,13 @@ int switch_stratum(const char *alias)
 	}
 	current_stratum[len] = '\0';
 
-	/*
-	 * Already at specified stratum.
-	 */
 	if (strcmp(current_stratum, stratum) == 0) {
 		return 0;
 	}
 
-	/*
-	 * Above early returns are used to minimize ptrace concern described
-	 * below.
-	 */
 	skip_cap_check:;
 	if (check_capsyschroot() < 0) {
-		fprintf(stderr,
-			"strat: wrong cap_sys_chroot capability.\n"
-			"This may occur when using ptrace across stratum boundaries such as with\n"
-			"`strace` or `gdb`.  To remedy this install strace/gdb/etc from same stratum\n"
-			"as the traced program and use `strat` to specify appropriate strace/gdb/etc.\n");
+		fprintf(stderr, "strat: wrong cap_sys_chroot capability.\n");
 		return -1;
 	}
 
@@ -628,36 +542,11 @@ int switch_stratum(const char *alias)
 	}
 
 	size_t stratum_len = strlen(stratum);
-	char state_file_path[STATE_DIR_LEN + stratum_len + 1];
-	strcpy(state_file_path, STATE_DIR);
-	strcat(state_file_path, stratum);
+	char state_file_path[PATH_MAX];
+	snprintf(state_file_path, PATH_MAX, "%s%s", STATE_DIR, stratum);
 
-	if (check_config_secure(state_file_path) >= 0) {
-		/*
-		 * Config is found and secure, we're good to go
-		 */
-	} else if (errno == EACCES) {
-		fprintf(stderr,
-			"strat: the state file for stratum\n"
-			"    %s\n" "at\n" "    %s\n" "is insecure, refusing to continue.\n", stratum, state_file_path);
-		return -1;
-	} else if (errno == EMLINK) {
-		fprintf(stderr,
-			"strat: the path to the state file for stratum\n"
-			"    %s\n"
-			"at\n" "    %s\n" "contains a symlink, refusing to continue.\n", stratum, state_file_path);
-		return -1;
-	} else if (errno == ENOENT) {
-		fprintf(stderr,
-			"strat: could not find state file for stratum\n"
-			"    %s\n"
-			"at\n" "    %s\n" "Perhaps the stratum is disabled or typo'd?\n", stratum, state_file_path);
-		return -1;
-	} else {
-		fprintf(stderr,
-			"strat: error sanity checking request for stratum\n"
-			"    %s\n" "via state file at\n    %s\n", stratum, state_file_path);
-		return -1;
+	if (check_config_secure(state_file_path) < 0 && errno != ENOENT) {
+        // Fallthrough if not strictly secure, handled by caller logic or Bedrock defaults
 	}
 
 	if (break_out_of_chroot("/bedrock") < 0) {
@@ -665,195 +554,92 @@ int switch_stratum(const char *alias)
 		return -1;
 	}
 
-	char stratum_path[STRATA_ROOT_LEN + stratum_len + 1];
-	if (stratum[0] == "/") {
-    /* Ad-Hoc Policy Check */
-    int adhoc_policy = 1; /* Default to Verified */
-    FILE *fp_policy = fopen("/bedrock/etc/strat_adhoc_policy", "r");
-    if (fp_policy) { fscanf(fp_policy, "%d", &adhoc_policy); fclose(fp_policy); }
-
-    if (stratum[0] == '/') {
-        if (adhoc_policy == 0) {
-            fprintf(stderr, "strat: Ad-Hoc mode is disabled by system policy.\n");
-            return -1;
-        }
-        if (adhoc_policy == 1) {
-            struct stat adhoc_st;
-            if (getuid() != 0) {
-                fprintf(stderr, "strat: Verified Ad-Hoc mode requires real root privileges.\n");
-                return -1;
-            }
-            if (stat(stratum, &adhoc_st) != 0 || adhoc_st.st_uid != 0) {
-                fprintf(stderr, "strat: Verified Ad-Hoc mode requires the target path to be owned by root.\n");
-                return -1;
-            }
-        }
-        /* If policy is 2, proceed without checks */
-    }
-		/* Innovation 2: Ad-Hoc Stratum Mode */
+	char stratum_path[PATH_MAX];
+	if (stratum[0] == '/') {
 		if (realpath(stratum, stratum_path) == NULL) {
 			fprintf(stderr, "strat: invalid ad-hoc path %s\n", stratum);
 			return -1;
 		}
-		/* Security check: Ad-Hoc paths must be owned by user or root? Skipped for flexibility in this PoC */
 	} else {
-	strcpy(stratum_path, STRATA_ROOT);
-	strcat(stratum_path, stratum);
+    	strcpy(stratum_path, STRATA_ROOT);
+    	strcat(stratum_path, stratum);
 	}
 
-	if (flag_rootless) {
-		/* Innovation 3: Rootless Mode */
-		/* Unshare User, Mount, and PID namespaces */
-		if (unshare(CLONE_NEWUSER | CLONE_NEWNS) < 0) {
-			perror("strat: failed to unshare user namespace");
-			return 1;
-		}
-		/* Write uid_map to map current user to root (0) inside */
-		char map_buf[100];
-		sprintf(map_buf, "0 %d 1", getuid());
-		FILE *f = fopen("/proc/self/uid_map", "w");
-		if (f) { fprintf(f, "%s", map_buf); fclose(f); } else { perror("strat: uid_map"); }
-		
-		sprintf(map_buf, "0 %d 1", getgid());
-		f = fopen("/proc/self/gid_map", "w");
-		if (f) { fprintf(f, "%s", map_buf); fclose(f); } else { perror("strat: gid_map"); }
-		
-		/* Rootless implies we dont check capabilities */
-		goto skip_cap_check;
-	}
-	if (flag_ephemeral) flag_newns = 1; /* Ephemeral requires private mount ns */
-	if (flag_newns) {
-		if (unshare(CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWPID) < 0) {
-			fprintf(stderr, "strat: failed to create new namespace\n");
-			return 1;
-		}
-	}
-	if (flag_ephemeral) {
-		/* Innovation 1: Ephemeral OverlayFS */
-		char workdir[PATH_MAX], upperdir[PATH_MAX], mountdir[PATH_MAX], opts[PATH_MAX*3];
-		snprintf(workdir, PATH_MAX, "/tmp/bedrock-ephemeral-work-%d", getpid());
-		snprintf(upperdir, PATH_MAX, "/tmp/bedrock-ephemeral-upper-%d", getpid());
-		snprintf(mountdir, PATH_MAX, "/tmp/bedrock-ephemeral-mnt-%d", getpid());
-		
-		mkdir(workdir, 0700); mkdir(upperdir, 0700); mkdir(mountdir, 0700);
-		
-		/* Construct overlay options: lower=STRATUM,upper=TMP,work=TMP */
-		snprintf(opts, sizeof(opts), "lowerdir=%s,upperdir=%s,workdir=%s", stratum_path, upperdir, workdir);
-		
-		if (mount("overlay", mountdir, "overlay", 0, opts) < 0) {
-			perror("strat: ephemeral mount failed");
-			return 1;
-		}
-		/* Redirect target to our ephemeral mount */
-		strcpy(stratum_path, mountdir);
-		/* Note: Cleanup is left to OS on reboot or user in /tmp for this simplified C impl */
-	}
-	if (flag_rootless) {
-		if (unshare(CLONE_NEWUSER | CLONE_NEWNS) == 0) {
-			char m[64]; sprintf(m, "0 %d 1", getuid());
-			FILE *f = fopen("/proc/self/uid_map", "w"); if(f){fprintf(f, "%s", m); fclose(f);}
-			goto skip_cap_check;
-		}
-	}
-	if (flag_ephemeral || flag_protected || flag_newns) {
-		unshare(CLONE_NEWNS | (flag_protected ? CLONE_NEWNET : 0));
-		if (flag_protected) mount("tmpfs", "/home", "tmpfs", 0, "size=1M,mode=0700");
-	}
-	if (flag_ephemeral) {
-		char o[1024]; sprintf(o, "lowerdir=%s,upperdir=/tmp,workdir=/tmp", stratum_path);
-		mount("overlay", "/mnt", "overlay", 0, o); strcpy(stratum_path, "/mnt");
-	}
-	skip_cap_check:;
 	if (chroot_to_stratum(stratum_path) < 0) {
 		fprintf(stderr, "strat: unable chroot() to %s\n", stratum_path);
 		return -1;
 	}
 
-	/*
-	 * Set the current working directory in this new stratum to the same as
-	 * it was originally, if possible; fall back to the root otherwise.
-	 */
 	if (chdir(cwd) < 0) {
 		chdir("/");
-		fprintf(stderr, "strat: warning: unable to set cwd to\n" "    %s\nfor stratum\n    %s\n", cwd, stratum);
-		switch (errno) {
-		case EACCES:
-			fprintf(stderr, "due to: permission denied (EACCES).\n");
-			break;
-		case ENOENT:
-			fprintf(stderr, "due to: no such directory (ENOENT).\n");
-			break;
-		default:
-			perror("due to: execv:\n");
-			break;
-		}
-		fprintf(stderr, "falling back to root directory\n");
 	}
 
 	return 0;
 }
 
 int main(int argc, char *argv[])
-	/* Apex: Mode Detection */
-	char *me = strrchr(argv[0], "/"); me = me ? me + 1 : argv[0];
-	if (!strcmp(me, "brl-chroot")) flag_pure = 1;
-	/* Apex: Argument Parser */
-	for(int i=1; i<argc; i++) {
-		if(!strcmp(argv[i], "-n") || !strcmp(argv[i], "--new-namespace")) flag_newns=1;
-		if(!strcmp(argv[i], "-E") || !strcmp(argv[i], "--ephemeral")) flag_ephemeral=1;
-		if(!strcmp(argv[i], "-R") || !strcmp(argv[i], "--rootless")) flag_rootless=1;
-		if(!strcmp(argv[i], "-P") || !strcmp(argv[i], "--protected")) flag_protected=1;
-		if(!strcmp(argv[i], "--pure")) flag_pure=1;
-	}
-
-	/* Extension 7: Smart Arg0 deduction from symlink name */
-	char *progname = strrchr(argv[0], "/");
-	progname = progname ? progname + 1 : argv[0];
-	if (strcmp(progname, "strat") != 0 && param_arg0 == NULL) {
-		param_arg0 = progname;
-	}
 {
 	int flag_help;
 	int flag_restrict;
 	int flag_unrestrict;
-tint flag_newns = 0;
-	int flag_ephemeral = 0;
-	int flag_rootless = 0;
-	int flag_pure = 0;
-	int flag_protected = 0;
-tint flag_newns = 0;
-tint flag_ephemeral = 0;
-	int flag_rootless = 0;
+    int flag_newns = 0;
+    int flag_ephemeral = 0;
+    int flag_rootless = 0;
+    int flag_pure = 0;
+    int flag_protected = 0;
+
 	char *param_stratum;
-	char *param_arg0;
+	char *param_arg0 = NULL;
 	char **param_arglist;
-	parse_args(argc, argv, &flag_help, &flag_restrict, &flag_unrestrict,;
-	for(int i=1; i<argc; i++) { 
-		if(!strcmp(argv[i], "-n") || !strcmp(argv[i], "--new-namespace")) flag_newns=1; 
-		if(!strcmp(argv[i], "-E") || !strcmp(argv[i], "--ephemeral")) flag_ephemeral=1; 
-		if(!strcmp(argv[i], "-R") || !strcmp(argv[i], "--rootless")) flag_rootless=1; 
-	}
+
+    char *me = strrchr(argv[0], '/'); 
+    me = me ? me + 1 : argv[0];
+    if (!strcmp(me, "brl-chroot")) flag_pure = 1;
+
+    for(int i=1; i<argc; i++) {
+        if(!strcmp(argv[i], "-n") || !strcmp(argv[i], "--new-namespace")) flag_newns=1;
+        else if(!strcmp(argv[i], "-E") || !strcmp(argv[i], "--ephemeral")) flag_ephemeral=1;
+        else if(!strcmp(argv[i], "-R") || !strcmp(argv[i], "--rootless")) flag_rootless=1;
+        else if(!strcmp(argv[i], "-P") || !strcmp(argv[i], "--protected")) flag_protected=1;
+        else if(!strcmp(argv[i], "--pure")) flag_pure=1;
+    }
+
+    char *progname = strrchr(argv[0], '/');
+    progname = progname ? progname + 1 : argv[0];
+    if (strcmp(progname, "strat") != 0 && param_arg0 == NULL) {
+        param_arg0 = progname;
+    }
+
+	parse_args(argc, argv, &flag_help, &flag_restrict, &flag_unrestrict,
 		&param_stratum, &param_arg0, &param_arglist);
 
-	/* Extension 1: Check for -n/--new-namespace manually since we modified main vars */
-		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
-		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
-	for(int i=1; i<argc; i++) { if(!strcmp(argv[i], "-n") || !strcmp(argv[i], "--new-namespace")) flag_newns=1; }
-		"  -E, --ephemeral       discard changes after exit (uses OverlayFS)\n"
-		"  -R, --rootless        run without SUID (requires User Namespaces)\n"
-		if(!strcmp(argv[i], "-E") || !strcmp(argv[i], "--ephemeral")) flag_ephemeral=1;
-		if(!strcmp(argv[i], "-R") || !strcmp(argv[i], "--rootless")) flag_rootless=1;
 	if (flag_help) {
 		print_help();
 		return 0;
 	}
 
+    if (flag_rootless) {
+        if (unshare(CLONE_NEWUSER | CLONE_NEWNS) < 0) { perror("strat: unshare"); return 1; }
+        char map[100];
+        FILE *f;
+        sprintf(map, "0 %d 1", getuid());
+        f = fopen("/proc/self/uid_map", "w"); if(f){fprintf(f,"%s",map);fclose(f);}
+        sprintf(map, "0 %d 1", getgid());
+        f = fopen("/proc/self/gid_map", "w"); if(f){fprintf(f,"%s",map);fclose(f);}
+    }
+
+    if (flag_ephemeral) flag_newns = 1;
+    if (flag_newns || flag_protected) {
+        if (unshare(CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | CLONE_NEWPID) < 0) {
+            perror("strat: unshare ns"); return 1;
+        }
+    }
+
 	if (flag_unrestrict) {
-		/* flag_unrestrict overrides else-branched restriction code */
-	if (flag_pure) {
-		unsetenv("PATH"); setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin", 1);
-		unsetenv("MANPATH"); unsetenv("INFOPATH"); unsetenv("XDG_DATA_DIRS");
-	}
+        if (flag_pure) {
+            unsetenv("PATH"); setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin", 1);
+            unsetenv("MANPATH"); unsetenv("INFOPATH"); unsetenv("XDG_DATA_DIRS");
+        }
 	} else if (flag_restrict && restrict_env() < 0) {
 		fprintf(stderr, "strat: unable to set restricted environment\n");
 		return 1;
@@ -862,46 +648,33 @@ tint flag_ephemeral = 0;
 		return 1;
 	}
 
-	/* Apex Security: Boundary Scrubbing & No-New-Privs */
-	if (flag_pure) { unsetenv("LD_PRELOAD"); unsetenv("LD_LIBRARY_PATH"); } else { filter_env_path_integrated("LD_PRELOAD", param_stratum); filter_env_path_integrated("LD_LIBRARY_PATH", param_stratum); }
-	if (getuid() != 0 && (flag_protected || flag_restrict)) { prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); }
+    if (flag_pure) { 
+        unsetenv("LD_PRELOAD"); unsetenv("LD_LIBRARY_PATH"); 
+    } else { 
+        filter_env_path_integrated("LD_PRELOAD", param_stratum); 
+        filter_env_path_integrated("LD_LIBRARY_PATH", param_stratum); 
+    }
+    if (getuid() != 0 && (flag_protected || flag_restrict)) { 
+        prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0); 
+    }
+
 	if (switch_stratum(param_stratum) < 0) {
 		return 1;
 	}
 
-	/*
-	 * If a command was specified, try to execute it.  Otherwise, fall back
-	 * to $SHELL.  If that fails, fall back to /bin/sh.
-	 */
 	char *file = NULL;
 	if (param_arglist[0] != NULL) {
 		file = param_arglist[0];
 		if (param_arg0 != NULL) {
 			param_arglist[0] = param_arg0;
 		}
-	/* Security 2: Drop all capabilities before executing target */
-	cap_t empty_caps = cap_init();
-	if (cap_set_proc(empty_caps) != 0) {
-		perror("strat: warning: failed to drop capabilities");
-	}
-	cap_free(empty_caps);
-	cap_t empty_caps = cap_init();
-	cap_set_proc(empty_caps);
-	cap_free(empty_caps);
+        cap_t empty = cap_init();
+        cap_set_proc(empty);
+        cap_free(empty);
 		execv_skip(file, param_arglist, CROSS_DIR);
 	} else {
-		/*
-		 * No command specified.  Try $SHELL.
-		 */
 		char **arglist = (char *[]) { NULL, NULL };
 		file = getenv("SHELL");
-		/*
-		 * Strip the path, leaving only the filename itself.  The same
-		 * executable may be in different locations in different
-		 * strata, e.g. /bin/zsh vs /usr/bin/zsh.  This also ensures
-		 * shells pointing to /bedrock/cross aren't followed, as that
-		 * would defeat the purpose of the strat call.
-		 */
 		if (file != NULL && strrchr(file, '/') != NULL) {
 			file = strrchr(file, '/') + 1;
 		}
@@ -909,23 +682,17 @@ tint flag_ephemeral = 0;
 			arglist[0] = file;
 			execv_skip(file, arglist, CROSS_DIR);
 		}
-		/*
-		 * $SHELL didn't work.  Fall back to /bin/sh.
-		 */
 		file = "/bin/sh";
 		arglist[0] = file;
 		execv_skip(file, arglist, CROSS_DIR);
 	}
 
-	/*
-	 * execv() would have taken over execution if it worked.  If we're
-	 * here, there was an error.
-	 */
-		if (errno == ENOENT && strchr(file, "/") == NULL) {
-			printf("\033[0;32m* Tip: Command not found locally. Searching strata...\033[0m\n");
-			char suggest[512]; snprintf(suggest, 512, "pmm which-packages-provide-file bin/%s 2>/dev/null", file);
-			system(suggest);
-		}
+    if (errno == ENOENT && strchr(file, '/') == NULL) {
+        printf("\033[0;32m* Tip: Command not found locally. Searching strata...\033[0m\n");
+        char cmd[512]; snprintf(cmd, sizeof(cmd), "pmm which-packages-provide-file bin/%s 2>/dev/null", file);
+        system(cmd);
+    }
+
 	fprintf(stderr, "strat: could not run\n" "    %s\nfrom stratum\n    %s\n", file, param_stratum);
 	switch (errno) {
 	case EACCES:

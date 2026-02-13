@@ -324,10 +324,10 @@ $(COMPLETED)/libcap: vendor/libcap/.success_fetching_source $(COMPLETED)/builddi
 		> $(VENDOR)/libcap/Make.Rules-new
 	mv $(VENDOR)/libcap/Make.Rules-new $(VENDOR)/libcap/Make.Rules
 	cd $(VENDOR)/libcap/libcap && \
-		$(MAKE) BUILD_CC=$(MUSLCC) CC=$(MUSLCC) LD="$(MUSLCC) -Wl,-x -shared" lib=$(SUPPORT)/lib prefix=$(SUPPORT) BUILD_CFLAGS="$(CFLAGS) -static" SHARED=no DYNAMIC=no LIBCSTATIC=yes && \
+		$(MAKE) BUILD_CC="$(MUSLCC)" CC="$(MUSLCC)" LD="$(MUSLCC) -Wl,-x -shared" lib=$(SUPPORT)/lib prefix=$(SUPPORT) BUILD_CFLAGS="$(CFLAGS) -static" SHARED=no DYNAMIC=no LIBCSTATIC=yes && \
 		$(MAKE) install-static RAISE_SETFCAP=no DESTDIR=$(SUPPORT) prefix=/ lib=lib SHARED=no DYNAMIC=no LIBCSTATIC=yes
 	cd $(VENDOR)/libcap/progs && \
-		$(MAKE) BUILD_CC=$(MUSLCC) CC=$(MUSLCC) LD="$(MUSLCC) -Wl,-x -shared" lib=$(SUPPORT)/lib prefix=$(SUPPORT) LDFLAGS=-static SHARED=no DYNAMIC=no LIBCSTATIC=yes && \
+		$(MAKE) BUILD_CC="$(MUSLCC)" CC="$(MUSLCC)" LD="$(MUSLCC) -Wl,-x -shared" lib=$(SUPPORT)/lib prefix=$(SUPPORT) LDFLAGS=-static SHARED=no DYNAMIC=no LIBCSTATIC=yes && \
 		$(MAKE) install RAISE_SETFCAP=no DESTDIR=$(SUPPORT) prefix=/ lib=lib SHARED=no DYNAMIC=no LIBCSTATIC=yes
 	touch $(COMPLETED)/libcap
 libcap: $(COMPLETED)/libcap
@@ -351,12 +351,12 @@ $(COMPLETED)/libfuse: vendor/libfuse/.success_fetching_source $(COMPLETED)/build
 	mkdir -p $(VENDOR)/libfuse/build
 	# ln -s $(VENDOR)/libfuse/build/libfuse_config.h $(SUPPORT)/include/
 	cd $(VENDOR)/libfuse/build && \
-		CC=$(MUSLCC) CFLAGS="$(CFLAGS) -static" meson && \
+		CC="$(MUSLCC)" CFLAGS="$(CFLAGS) -static" meson && \
 		meson configure -D buildtype=release && \
 		meson configure -D default_library=static && \
 		meson configure -D strip=true && \
 		meson configure -D prefix=$(SUPPORT) && \
-		CC=$(MUSLCC) ninja lib/libfuse3.a
+		CC="$(MUSLCC)" ninja lib/libfuse3.a
 	cp -r $(VENDOR)/libfuse/build/lib/* $(SUPPORT)/lib/
 	mkdir -p $(SUPPORT)/include/fuse3/
 	cp $(VENDOR)/libfuse/include/*.h $(SUPPORT)/include/fuse3/
@@ -401,7 +401,7 @@ $(COMPLETED)/libaio: vendor/libaio/.success_retrieving_source $(COMPLETED)/build
 	rm -rf $(VENDOR)/libaio
 	cp -r vendor/libaio $(VENDOR)
 	cp $(VENDOR)/libaio/src/libaio.h $(SUPPORT)/include
-	cd $(VENDOR)/libaio && $(MAKE) CC=$(MUSLCC)
+	cd $(VENDOR)/libaio && $(MAKE) CC="$(MUSLCC)"
 	cp $(VENDOR)/libaio/src/libaio.a $(SUPPORT)/lib
 	cp $(VENDOR)/libaio/src/libaio.so.1.0.2 $(SUPPORT)/lib/libaio.so
 	touch $(COMPLETED)/libaio
@@ -424,8 +424,8 @@ $(COMPLETED)/util-linux: vendor/util-linux/.success_fetching_source $(COMPLETED)
 	rm -rf $(VENDOR)/util-linux
 	cp -r vendor/util-linux $(VENDOR)
 	cd $(VENDOR)/util-linux && ./autogen.sh && \
-		CC=$(MUSLCC) CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib" ./configure --enable-static=yes --disable-all-programs --enable-libblkid --enable-libuuid && \
-		$(MAKE) CC=$(MUSLCC) CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib"
+		CC="$(MUSLCC)" CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib" ./configure --enable-static=yes --disable-all-programs --enable-libblkid --enable-libuuid && \
+		$(MAKE) CC="$(MUSLCC)" CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib"
 	cp $(VENDOR)/util-linux/.libs/libblkid.* $(SUPPORT)/lib || true
 	cp $(VENDOR)/util-linux/.libs/libuuid.* $(SUPPORT)/lib || true
 	touch $(COMPLETED)/util-linux
@@ -447,15 +447,15 @@ $(COMPLETED)/openssl: vendor/openssl/.success_retrieving_source $(COMPLETED)/bui
 	cp -r vendor/openssl $(VENDOR)
 	cd $(VENDOR)/openssl && \
 		if [ "$(ARCHITECTURE)" = "mips64el" ]; then \
-			CC=$(MUSLCC) linux$(ARCH_BIT_DEPTH) ./Configure --prefix="$(SUPPORT)" no-shared linux64-mips64; \
+			CC="$(MUSLCC)" linux$(ARCH_BIT_DEPTH) ./Configure --prefix="$(SUPPORT)" no-shared linux64-mips64; \
 		elif [ "$(ARCHITECTURE)" = "ppc64" ]; then \
-			CC=$(MUSLCC) linux$(ARCH_BIT_DEPTH) ./Configure --prefix="$(SUPPORT)" no-shared linux-ppc64le; \
+			CC="$(MUSLCC)" linux$(ARCH_BIT_DEPTH) ./Configure --prefix="$(SUPPORT)" no-shared linux-ppc64le; \
 		elif [ "$(ARCHITECTURE)" = "armv7hl" ]; then \
-			CC=$(MUSLCC) linux$(ARCH_BIT_DEPTH) ./Configure --prefix="$(SUPPORT)" no-shared linux-armv4; \
+			CC="$(MUSLCC)" linux$(ARCH_BIT_DEPTH) ./Configure --prefix="$(SUPPORT)" no-shared linux-armv4; \
 		else \
-			CC=$(MUSLCC) linux$(ARCH_BIT_DEPTH) ./config --prefix="$(SUPPORT)" no-shared; \
+			CC="$(MUSLCC)" linux$(ARCH_BIT_DEPTH) ./config --prefix="$(SUPPORT)" no-shared; \
 		fi && \
-		$(MAKE) CC=$(MUSLCC) && \
+		$(MAKE) CC="$(MUSLCC)" && \
 		$(MAKE) install_sw && \
 		$(MAKE) clean # openssl tests use quite a lot of disk
 	touch $(COMPLETED)/openssl
@@ -577,7 +577,7 @@ $(SLASHBR)/libexec/busybox: vendor/busybox/.success_retrieving_source build/all/
 			done; \
 		fi
 	cd $(VENDOR)/busybox && \
-		$(MAKE) CC=$(MUSLCC) && \
+		$(MAKE) CC="$(MUSLCC)" && \
 		cp busybox $(SLASHBR)/libexec/busybox
 busybox: $(SLASHBR)/libexec/busybox
 
@@ -596,8 +596,8 @@ $(SLASHBR)/libexec/curl: vendor/curl/.success_retrieving_source $(COMPLETED)/bui
 	rm -rf $(VENDOR)/curl
 	cp -r vendor/curl $(VENDOR)
 	cd $(VENDOR)/curl && autoreconf -fi && \
-		CC=$(MUSLCC) CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib" ./configure --with-openssl --enable-static --disable-shared --enable-https --enable-ipv6 && \
-		$(MAKE) CC=$(MUSLCC) CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib" && \
+		CC="$(MUSLCC)" CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib" ./configure --with-openssl --enable-static --disable-shared --enable-https --enable-ipv6 && \
+		$(MAKE) CC="$(MUSLCC)" CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib" && \
 		cp src/curl $(SLASHBR)/libexec/curl
 curl: $(SLASHBR)/libexec/curl
 
@@ -618,9 +618,9 @@ $(COMPLETED)/libattr: vendor/libattr/.success_retrieving_source $(COMPLETED)/bui
 	# Sometimes autogen does not take the first time despite returning 0.  Thus, try a few times.
 	cd $(VENDOR)/libattr && \
 		./autogen.sh && \
-		CC=$(MUSLCC) ./configure --enable-static --disable-shared ; \
+		CC="$(MUSLCC)" ./configure --enable-static --disable-shared ; \
 		make clean && \
-		make CC=$(MUSLCC) getfattr setfattr && \
+		make CC="$(MUSLCC)" getfattr setfattr && \
 		cp getfattr $(SLASHBR)/libexec/getfattr && \
 		cp setfattr $(SLASHBR)/libexec/setfattr
 	touch $(COMPLETED)/libattr
@@ -656,7 +656,7 @@ $(SLASHBR)/libexec/netselect: vendor/netselect/.success_retrieving_source $(COMP
 			$(VENDOR)/netselect/netselect.c > $(VENDOR)/netselect/netselect_fixed.c && \
 		mv $(VENDOR)/netselect/netselect_fixed.c $(VENDOR)/netselect/netselect.c; fi
 	cd $(VENDOR)/netselect/ && \
-		make CC=$(MUSLCC) LDFLAGS='-static' && \
+		make CC="$(MUSLCC)" LDFLAGS='-static' && \
 		cp netselect $(SLASHBR)/libexec/netselect
 netselect: $(SLASHBR)/libexec/netselect
 
@@ -684,10 +684,10 @@ $(COMPLETED)/lvm2: vendor/lvm2/.success_retrieving_source $(COMPLETED)/musl $(CO
 	rm -rf $(VENDOR)/lvm2
 	cp -r vendor/lvm2 $(VENDOR)
 	cd $(VENDOR)/lvm2 && \
-		CC=$(MUSLCC) CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib -fPIC" ./configure --disable-udev-systemd-background-jobs --disable-blkid_wiping --disable-selinux --enable-static_link && \
-		$(MAKE) tools SHELL=bash CC=$(MUSLCC) CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib -L$(VENDOR)/lvm2/libdm/ioctl -fPIC" interfacebuilddir=$(VENDOR)/lvm2/libdm/ioctl
+		CC="$(MUSLCC)" CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib -fPIC" ./configure --disable-udev-systemd-background-jobs --disable-blkid_wiping --disable-selinux --enable-static_link && \
+		$(MAKE) tools SHELL=bash CC="$(MUSLCC)" CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib -L$(VENDOR)/lvm2/libdm/ioctl -fPIC" interfacebuilddir=$(VENDOR)/lvm2/libdm/ioctl
 	cd $(VENDOR)/lvm2/libdm/dm-tools && \
-		$(MAKE) SHELL=bash CC=$(MUSLCC) CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib -L$(VENDOR)/lvm2/libdm/ioctl -fPIC" interfacebuilddir=$(VENDOR)/lvm2/libdm/ioctl
+		$(MAKE) SHELL=bash CC="$(MUSLCC)" CFLAGS="-I$(SUPPORT)/include -L$(SUPPORT)/lib -L$(VENDOR)/lvm2/libdm/ioctl -fPIC" interfacebuilddir=$(VENDOR)/lvm2/libdm/ioctl
 	cp $(VENDOR)/lvm2/tools/lvm.static $(SLASHBR)/libexec/lvm
 	cp $(VENDOR)/lvm2/libdm/dm-tools/dmsetup.static $(SLASHBR)/libexec/dmsetup
 	touch $(COMPLETED)/lvm2
@@ -712,7 +712,7 @@ $(COMPLETED)/zstd: vendor/zstd/.success_retrieving_source $(COMPLETED)/musl
 	rm -rf $(VENDOR)/zstd
 	cp -r vendor/zstd $(VENDOR)
 	cd $(VENDOR)/zstd && \
-		$(MAKE) CC=$(MUSLCC) zstd lib prefix=$(SUPPORT) install && \
+		$(MAKE) CC="$(MUSLCC)" zstd lib prefix=$(SUPPORT) install && \
 		cp zstd $(SLASHBR)/libexec/zstd
 	touch $(COMPLETED)/zstd
 $(SLASHBR)/libexec/zstd: $(COMPLETED)/zstd
@@ -729,7 +729,7 @@ $(COMPLETED)/zlib: vendor/zlib/.success_retrieving_source $(COMPLETED)/musl
 	cp -r vendor/zlib $(VENDOR)
 	cd $(VENDOR)/zlib && \
 		./configure --prefix=$(SUPPORT) --static && \
-		$(MAKE) CC=$(MUSLCC) install prefix=$(SUPPORT)
+		$(MAKE) CC="$(MUSLCC)" install prefix=$(SUPPORT)
 	touch $(COMPLETED)/zlib
 zlib: $(COMPLETED)/zlib
 
@@ -753,7 +753,7 @@ $(COMPLETED)/xz: vendor/xz/.success_retrieving_source $(COMPLETED)/musl
 		./autogen.sh --no-po4a --no-doxygen
 	cd $(VENDOR)/xz && \
 		CFLAGS="-static" LDFLAGS="-static" ./configure --prefix=$(SUPPORT) --enable-static --disable-shared
-	cd $(VENDOR)/xz && $(MAKE) CC=$(MUSLCC) install prefix=$(SUPPORT)
+	cd $(VENDOR)/xz && $(MAKE) CC="$(MUSLCC)" install prefix=$(SUPPORT)
 	rm $(SUPPORT)/lib/liblzma.la
 	touch $(COMPLETED)/xz
 xz: $(COMPLETED)/xz
@@ -777,10 +777,10 @@ $(SLASHBR)/libexec/kmod: vendor/kmod/.success_retrieving_source $(COMPLETED)/mus
 	cp -r vendor/kmod $(VENDOR)
 	cd $(VENDOR)/kmod && \
 		PATH="$(SUPPORT)/bin:${PATH}" ./autogen.sh --with-xz --with-zlib --with-zstd --disable-manpages --prefix=$(SUPPORT) --includedir=$(SUPPORT)/include --libdir=$(SUPPORT)/lib --bindir=$(SUPPORT)/bin \
-			CC=$(MUSLCC) CCLD=$(MUSLCC) LD=$(MUSLCC) PKG_CONFIG_PATH=$(SUPPORT)/lib/pkgconfig && \
+			CC="$(MUSLCC)" CCLD="$(MUSLCC)" LD="$(MUSLCC)" PKG_CONFIG_PATH=$(SUPPORT)/lib/pkgconfig && \
 		./configure --with-xz --with-zlib --with-zstd --disable-manpages --prefix=$(SUPPORT) --includedir=$(SUPPORT)/include --libdir=$(SUPPORT)/lib --bindir=$(SUPPORT)/bin \
-			CC=$(MUSLCC) LDFLAGS="-L$(SUPPORT)/lib" PKG_CONFIG_PATH=$(SUPPORT)/lib/pkgconfig && \
-		$(MAKE) CC=$(MUSLCC) LDFLAGS="-L$(SUPPORT)/lib" PKG_CONFIG_PATH=$(SUPPORT)/lib/pkgconfig tools/kmod
+			CC="$(MUSLCC)" LDFLAGS="-L$(SUPPORT)/lib" PKG_CONFIG_PATH=$(SUPPORT)/lib/pkgconfig && \
+		$(MAKE) CC="$(MUSLCC)" LDFLAGS="-L$(SUPPORT)/lib" PKG_CONFIG_PATH=$(SUPPORT)/lib/pkgconfig tools/kmod
 	cp $(VENDOR)/kmod/tools/kmod $(SLASHBR)/libexec/kmod
 kmod: $(SLASHBR)/libexec/kmod
 
@@ -788,7 +788,7 @@ $(SLASHBR)/bin/strat: $(COMPLETED)/builddir $(COMPLETED)/musl $(COMPLETED)/libca
 	rm -rf $(SRC)/strat
 	cp -r src/strat/ $(SRC)
 	cd $(SRC)/strat && \
-		$(MAKE) CC=$(MUSLCC) && \
+		$(MAKE) CC="$(MUSLCC)" && \
 		cp ./strat $(SLASHBR)/bin/strat
 strat: $(SLASHBR)/bin/strat
 
@@ -796,7 +796,7 @@ $(SLASHBR)/libexec/manage_tty_lock: $(COMPLETED)/builddir $(COMPLETED)/musl
 	rm -rf $(SRC)/manage_tty_lock
 	cp -r src/manage_tty_lock/ $(SRC)
 	cd $(SRC)/manage_tty_lock && \
-		$(MAKE) CC=$(MUSLCC) && \
+		$(MAKE) CC="$(MUSLCC)" && \
 		cp manage_tty_lock $(SLASHBR)/libexec/manage_tty_lock
 manage_tty_lock: $(SLASHBR)/libexec/manage_tty_lock
 
@@ -804,7 +804,7 @@ $(SLASHBR)/libexec/keyboard_is_present: $(COMPLETED)/builddir $(COMPLETED)/musl
 	rm -rf $(SRC)/keyboard_is_present
 	cp -r src/keyboard_is_present/ $(SRC)
 	cd $(SRC)/keyboard_is_present && \
-		$(MAKE) CC=$(MUSLCC) && \
+		$(MAKE) CC="$(MUSLCC)" && \
 		cp keyboard_is_present $(SLASHBR)/libexec/keyboard_is_present
 keyboard_is_present: $(SLASHBR)/libexec/keyboard_is_present
 
@@ -812,7 +812,7 @@ $(SLASHBR)/libexec/plymouth-quit: $(COMPLETED)/builddir $(COMPLETED)/musl
 	rm -rf $(SRC)/plymouth-quit
 	cp -r src/plymouth-quit/ $(SRC)
 	cd $(SRC)/plymouth-quit && \
-		$(MAKE) CC=$(MUSLCC) && \
+		$(MAKE) CC="$(MUSLCC)" && \
 		cp plymouth-quit $(SLASHBR)/libexec/plymouth-quit
 plymouth-quit: $(SLASHBR)/libexec/plymouth-quit
 
@@ -820,14 +820,14 @@ $(SLASHBR)/libexec/bouncer: $(COMPLETED)/builddir $(COMPLETED)/musl
 	rm -rf $(SRC)/bouncer
 	cp -r src/bouncer/ $(SRC)
 	cd $(SRC)/bouncer && \
-		$(MAKE) CC=$(MUSLCC) && \
+		$(MAKE) CC="$(MUSLCC)" && \
 		cp ./bouncer $(SLASHBR)/libexec/bouncer
 bouncer: $(SLASHBR)/libexec/bouncer
 
 $(SLASHBR)/libexec/brl-kmon: $(COMPLETED)/builddir $(COMPLETED)/musl
 	rm -rf $(SRC)/kmon
 	cp -r src/kmon/ $(SRC)
-	cd $(SRC)/kmon && $(MAKE) CC=$(MUSLCC) && cp ./kmon $(SLASHBR)/libexec/brl-kmon
+	cd $(SRC)/kmon && $(MAKE) CC="$(MUSLCC)" && cp ./kmon $(SLASHBR)/libexec/brl-kmon
 kmon: $(SLASHBR)/libexec/brl-kmon
 
 $(SLASHBR)/libexec/etcfs: $(COMPLETED)/builddir \
@@ -836,7 +836,7 @@ $(SLASHBR)/libexec/etcfs: $(COMPLETED)/builddir \
 	rm -rf $(SRC)/etcfs
 	cp -r src/etcfs/ $(SRC)
 	cd $(SRC)/etcfs && \
-		make CC=$(MUSLCC) CFLAGS="$(CFLAGS)" && \
+		make CC="$(MUSLCC)" CFLAGS="$(CFLAGS)" && \
 		cp ./etcfs $(SLASHBR)/libexec/etcfs
 etcfs: $(SLASHBR)/libexec/etcfs
 
@@ -847,7 +847,7 @@ $(SLASHBR)/libexec/crossfs: $(COMPLETED)/builddir \
 	rm -rf $(SRC)/crossfs
 	cp -r src/crossfs/ $(SRC)
 	cd $(SRC)/crossfs && \
-		make CC=$(MUSLCC) CFLAGS="$(CFLAGS)" && \
+		make CC="$(MUSLCC)" CFLAGS="$(CFLAGS)" && \
 		cp ./crossfs $(SLASHBR)/libexec/crossfs
 crossfs: $(SLASHBR)/libexec/crossfs
 
