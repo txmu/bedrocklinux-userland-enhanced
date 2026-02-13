@@ -285,54 +285,41 @@ pretty_print_options() {
 }
 
 get_init_choice() {
-	echo "Select init number to use for this session" >&2
-	echo "See /bedrock/etc/bedrock.conf [init] to change default init and timeout" >&2
-	echo "" >&2
+	echo "Select init number to use" >&2
 	max="$(list_init_options | wc -l)"
-
 	wait_for_keyboard >&2
-
 	while true; do
 		pretty_print_options >&2
-
-		printf "\\nInit number: " >&2
-
-		if [ -z "${selected_num}" ]; then
-		if [ "${init_timeout}" -eq 0 ] && [ -n "${def_path}" ] && [ -x "${def_path}" ]; then
+		printf "\nInit number: " >&2
+		if [ "${init_timeout}" -eq 0 ] && [ -n "${def_path}" ]; then
 			selected_num=0
-		elif [ "${init_timeout}" -gt 0 ] && [ -n "${def_path}" ] && [ -x "${def_path}" ]; then
-			printf "(${color_sub}${init_timeout}s${color_norm}): " >&2
-			read -r -t "${init_timeout}" selected_num
+		elif [ "${init_timeout}" -gt 0 ] && [ -n "${def_path}" ]; then
+			printf "(${init_timeout}s): " >&2
+			read -r -t "${init_timeout}" input_str || input_str=""
 		else
 			read -r input_str
-			if echo "${input_str}" | grep -q "^s[[:space:]]*[0-9]"; then
-				selected_num=$(echo "${input_str}" | awk "{print \$2}")
-				tgt=$(list_init_options | awk -v"n=${selected_num}" "NR==n {print \$1\":\"\$3}")
-				if [ -n "${tgt}" ]; then
-					mount -o remount,rw /
-					sed -i "s|^default =.*|default = ${tgt}|" /bedrock/etc/bedrock.conf
-					echo " -> Default updated successfully."
-					sleep 1
-				fi
-			else
-				selected_num="${input_str}"
+		fi
+		if echo "${input_str}" | grep -q "^s[[:space:]]*[0-9]"; then
+			selected_num=$(echo "${input_str}" | awk "{print \$2}")
+			tgt=$(list_init_options | awk -v"n=${selected_num}" "NR==n {print \$1\":\"\$3}")
+			if [ -n "${tgt}" ]; then
+				mount -o remount,rw /
+				sed -i "s|^default =.*|default = ${tgt}|" /bedrock/etc/bedrock.conf
+				echo " -> Default updated."
+				sleep 1
 			fi
+		else
+			selected_num="${input_str}"
 		fi
-			selected_num=0
+		[ -z "${selected_num}" ] && selected_num=0
+		if [ "${selected_num}" -eq 0 ] && [ -n "${def_path}" ]; then
+			echo "${def_stratum}:${def_cmd}"; return
+		elif echo "${selected_num}" | grep -q "^[0-9]*$" && [ "${selected_num}" -gt 0 ] && [ "${selected_num}" -le "${max}" ]; then
+			list_init_options | awk -v"n=${selected_num}" 'NR==n {print $1":"$3}'; return
 		fi
-		if [ -n "${def_path}" ] && [ -x "${def_path}" ] && [ "${selected_num}" -eq 0 ]; then
-			echo "${def_stratum}:${def_cmd}"
-			return
-		elif echo "${selected_num}" | grep -q "[^0-9]"; then
-			true
-		elif [ "${selected_num}" -gt "${max}" ]; then
-			true
-		elif [ "${selected_num}" -gt 0 ]; then
-			list_init_options | awk -v"n=${selected_num}" 'NR==n {print $1":"$3}'
-			return
-		fi
-		printf "${color_alert}Unrecognized choice, try again.${color_norm}\\n" >&2
+		printf "Invalid choice, try again.\n" >&2
 	done
+}
 }
 
 pivot() {

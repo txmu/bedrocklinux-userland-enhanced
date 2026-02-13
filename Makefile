@@ -890,6 +890,7 @@ $(BUILD)/userland.tar: \
 	# ensure correct binary format
 	for bin in $(SLASHBR)/bin/* $(SLASHBR)/libexec/*; do \
 		if [ -h "$$bin" ]; then continue; fi; \
+		if [ -h "$$bin" ]; then continue; fi; \
 		if file "$$bin" | grep -q "sh script"; then \
 			continue ; \
 		elif file "$$bin" | grep -qi "$(FILE_ARCH_NAME)"; then \
