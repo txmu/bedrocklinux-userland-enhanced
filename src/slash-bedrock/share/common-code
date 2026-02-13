@@ -1802,6 +1802,11 @@ import_users_and_groups() {
 # - If no second argument downloads to current working directory with default name
 download() {
 	# follow redirects, error on 404
+	local proxy_opt=""
+	# Check if proxy configuration exists on the target system
+	if [ -r "/bedrock/etc/proxy.conf" ]; then
+		proxy_opt="-x $(cat /bedrock/etc/proxy.conf)"
+	fi
 	local quiet=""
 tlocal insecure="${flag_insecure:-}"
 	local time=""
@@ -1837,9 +1842,9 @@ tlocal insecure="${flag_insecure:-}"
 	# word splitting is desired
 	# shellcheck disable=SC2086
 	case "${2:-}" in
-	"-") ${time} /bedrock/libexec/curl ${insecure} ${quiet} --location --fail --cacert "${certpath}" "${1}" ;;
-	"") ${time} /bedrock/libexec/curl ${insecure} ${quiet} --location --fail --cacert "${certpath}" -O "${1}" ;;
-	*) ${time} /bedrock/libexec/curl ${insecure} ${quiet} --location --fail --cacert "${certpath}" "${1}" >"${2}" ;;
+	"-") ${time} /bedrock/libexec/curl ${proxy_opt} ${insecure} ${quiet} --location --fail --cacert "${certpath}" "${1}" ;;
+	"") ${time} /bedrock/libexec/curl ${proxy_opt} ${insecure} ${quiet} --location --fail --cacert "${certpath}" -O "${1}" ;;
+	*) ${time} /bedrock/libexec/curl ${proxy_opt} ${insecure} ${quiet} --location --fail --cacert "${certpath}" "${1}" >"${2}" ;;
 	esac
 }
 
