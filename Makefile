@@ -908,7 +908,7 @@ $(BUILD)/userland.tar: \
 	find $(SLASHBR) -type d -exec chmod 0755 {} \;
 	find $(SLASHBR) -type f -exec chmod 0644 {} \;
 	find $(SLASHBR)/bin/ -type f -exec chmod 0755 {} \;
-tln -s strat $(SLASHBR)/bin/brl-chroot
+	ln -s strat $(SLASHBR)/bin/brl-chroot
 	find $(SLASHBR)/libexec/ -type f -exec chmod 0755 {} \;
 	chmod 700 $(SLASHBR)/gnupg-keys
 	chmod 600 $(SLASHBR)/gnupg-keys/*
