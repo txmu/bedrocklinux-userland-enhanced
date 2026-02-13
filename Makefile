@@ -889,6 +889,7 @@ $(BUILD)/userland.tar: \
 	fi
 	# ensure correct binary format
 	for bin in $(SLASHBR)/bin/* $(SLASHBR)/libexec/*; do \
+		if [ -h "$$bin" ]; then continue; fi; \
 		if file "$$bin" | grep -q "sh script"; then \
 			continue ; \
 		elif file "$$bin" | grep -qi "$(FILE_ARCH_NAME)"; then \
@@ -908,7 +909,7 @@ $(BUILD)/userland.tar: \
 	find $(SLASHBR) -type d -exec chmod 0755 {} \;
 	find $(SLASHBR) -type f -exec chmod 0644 {} \;
 	find $(SLASHBR)/bin/ -type f -exec chmod 0755 {} \;
-	ln -s strat $(SLASHBR)/bin/brl-chroot
+	ln -sf strat $(SLASHBR)/bin/brl-chroot
 	find $(SLASHBR)/libexec/ -type f -exec chmod 0755 {} \;
 	chmod 700 $(SLASHBR)/gnupg-keys
 	chmod 600 $(SLASHBR)/gnupg-keys/*
