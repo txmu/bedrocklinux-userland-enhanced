@@ -16,6 +16,13 @@
 #define FUSE_USE_VERSION 32
 #define _GNU_SOURCE
 
+/* HARDENING HEADERS START */
+#include <sys/resource.h>
+#include <sys/mman.h>
+#include <signal.h>
+#include <syslog.h>
+#include <sched.h>
+/* HARDENING HEADERS END */
 #include <dirent.h>
 #include <errno.h>
 #include <fuse3/fuse.h>
@@ -2137,13 +2144,70 @@ static struct fuse_operations m_oper = {
 	.flock = m_flock,
 };
 
+
+/* --- BEDROCK HARDENING START --- */
+void bedrock_watchdog(int sig) {
+    const char *msg = "UNKNOWN";
+    switch(sig) {
+        case SIGSEGV: msg = "SIGSEGV(Segmentation Fault)"; break;
+        case SIGTERM: msg = "SIGTERM(Termination)"; break;
+        case SIGABRT: msg = "SIGABRT(Abort)"; break;
+    }
+    /* Log critical failure to system log */
+    syslog(LOG_CRIT, "BEDROCK-FATAL: Core process died! Signal: %s", msg);
+    fprintf(stderr, "\n*** BEDROCK-FATAL: Process crashed (%s) ***\n", msg);
+    
+    /* In a real init scenario, we might want to try a soft-restart here,
+       but for FUSE, crashing is often safer than hanging. */
+    if (sig == SIGSEGV) abort();
+    exit(1);
+}
+
+void apply_hardening_measures(void) {
+    int rc;
+
+    /* 1. OOM Immunity: Make this process unkillable by kernel OOM killer */
+    FILE *f = fopen("/proc/self/oom_score_adj", "w");
+    if (f) {
+        fprintf(f, "-1000");
+        fclose(f);
+    } else {
+        /* Fallback for older kernels */
+        f = fopen("/proc/self/oom_adj", "w");
+        if (f) { fprintf(f, "-17"); fclose(f); }
+    }
+
+    /* 2. Memory Locking: Prevent swapping to disk (crucial for IO performance stability) */
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        perror("BEDROCK-WARN: Failed to lock memory (mlockall)");
+    }
+
+    /* 3. CPU Priority: Set to highest niceness (-20) for responsiveness */
+    setpriority(PRIO_PROCESS, 0, -20);
+
+    /* 4. File Descriptors: Increase to 1 Million (Max Scale) */
+    struct rlimit rlim;
+    rlim.rlim_cur = 1048576;
+    rlim.rlim_max = 1048576;
+    if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
+        /* Fallback to 65536 if 1M fails */
+        rlim.rlim_cur = 65536;
+        rlim.rlim_max = 65536;
+        setrlimit(RLIMIT_NOFILE, &rlim);
+    }
+
+    /* 5. Watchdog & Signals */
+    signal(SIGPIPE, SIG_IGN); /* Ignore broken pipes (common in FUSE) */
+    signal(SIGSEGV, bedrock_watchdog);
+    signal(SIGTERM, bedrock_watchdog);
+    signal(SIGABRT, bedrock_watchdog);
+
+    fprintf(stderr, "BEDROCK-INFO: System Hardening Applied (OOM-1000, MLOCK, PRIO-20, FD-1M)\n");
+}
+/* --- BEDROCK HARDENING END --- */
 int main(int argc, char *argv[])
-	struct rlimit r; r.rlim_cur = 4096; r.rlim_max = 4096; setrlimit(RLIMIT_NOFILE, &r);
-	/* Security 4: Set resource limits */
-	struct rlimit rlim;
-	rlim.rlim_cur = 4096; rlim.rlim_max = 4096;
-	setrlimit(RLIMIT_NOFILE, &rlim);
 {
+    apply_hardening_measures();
 	/*
 	 * Ensure we are running as root.  This is needed to mimic caller
 	 * process permissions.
