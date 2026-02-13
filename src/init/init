@@ -297,6 +297,7 @@ get_init_choice() {
 
 		printf "\\nInit number: " >&2
 
+		if [ -z "${selected_num}" ]; then
 		if [ "${init_timeout}" -eq 0 ] && [ -n "${def_path}" ] && [ -x "${def_path}" ]; then
 			selected_num=0
 		elif [ "${init_timeout}" -gt 0 ] && [ -n "${def_path}" ] && [ -x "${def_path}" ]; then
@@ -304,18 +305,19 @@ get_init_choice() {
 			read -r -t "${init_timeout}" selected_num
 		else
 			read -r input_str
-		fi
-		if echo "${input_str}" | grep -q "^s[[:space:]]*[0-9]"; then
-			selected_num=$(echo "${input_str}" | awk "{print $2}")
 			if echo "${input_str}" | grep -q "^s[[:space:]]*[0-9]"; then
-				selected_num=$(echo "${input_str}" | awk "{print $2}")
-				tgt=$(list_init_options | awk -v"n=${selected_num}" "NR==n {print $1\":\"$3}")
-				if [ -n "${tgt}" ]; then mount -o remount,rw /; sed -i "s|^default =.*|default = ${tgt}|" /bedrock/etc/bedrock.conf; fi; echo " -> Default updated successfully."; sleep 1
+				selected_num=$(echo "${input_str}" | awk "{print \$2}")
+				tgt=$(list_init_options | awk -v"n=${selected_num}" "NR==n {print \$1\":\"\$3}")
+				if [ -n "${tgt}" ]; then
+					mount -o remount,rw /
+					sed -i "s|^default =.*|default = ${tgt}|" /bedrock/etc/bedrock.conf
+					echo " -> Default updated successfully."
+					sleep 1
+				fi
 			else
 				selected_num="${input_str}"
 			fi
 		fi
-		if [ -z "${selected_num}" ]; then
 			selected_num=0
 		fi
 		if [ -n "${def_path}" ] && [ -x "${def_path}" ] && [ "${selected_num}" -eq 0 ]; then

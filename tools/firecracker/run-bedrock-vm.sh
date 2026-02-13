@@ -443,7 +443,7 @@ EOF
 	fi
 
 	need_cmd readelf
-	extractor="$repo_root/vendor~/linux_headers/scripts/extract-vmlinux"
+	extractor="$repo_root/vendor/linux_headers/scripts/extract-vmlinux"
 	if [ ! -x "$extractor" ]; then
 		echo "Missing extract-vmlinux at $extractor" >&2
 		exit 1
@@ -483,7 +483,7 @@ ensure_kernel() {
 	fi
 
 	need_cmd readelf
-	extractor="$repo_root/vendor~/linux_headers/scripts/extract-vmlinux"
+	extractor="$repo_root/vendor/linux_headers/scripts/extract-vmlinux"
 	if [ ! -x "$extractor" ]; then
 		echo "Missing extract-vmlinux at $extractor" >&2
 		exit 1
