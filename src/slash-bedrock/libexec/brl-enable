@@ -43,6 +43,7 @@ require_root
 lock
 
 enable_stratum() {
+	run_hooks "pre-enable" "${stratum}"
 	stratum="${1}"
 	root="$(stratum_root "${stratum}")"
 	br_root="/bedrock/strata/bedrock"
@@ -99,6 +100,7 @@ enable_stratum() {
 
 	if ! "${skip_crossfs}"; then
 		cfg_crossfs "/proc/1/root/bedrock/strata/bedrock/bedrock/cross"
+	run_hooks "post-enable" "${stratum}"
 	fi
 }
 

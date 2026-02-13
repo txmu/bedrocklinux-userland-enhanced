@@ -230,3 +230,22 @@ Where To Get Help
 - Forums: http://www.linuxquestions.org/questions/bedrock-linux-118
 - Reddit: http://reddit.com/r/bedrocklinux
 - Github: https://github.com/bedrocklinux
+
+Hook System
+-----------
+
+Bedrock Linux supports lifecycle hooks for strata during enable and disable operations. This allows for automated management of stratum-specific services, such as starting a background daemon when a stratum is enabled.
+
+Hooks are located in `/bedrock/etc/hooks.d/`. The system looks for executable files with the following naming conventions:
+
+- Generic hooks: `pre-enable`, `post-enable`, `pre-disable`, `post-disable`
+- Stratum-specific hooks: `pre-enable-<name>`, `post-enable-<name>`, etc.
+
+When an operation occurs, the hook is called with the stratum name as the first argument.
+
+Example: To automatically start the xxx daemon, create `/bedrock/etc/hooks.d/post-enable-xxx`:
+
+    #!/bin/sh
+    # Start xxx-daemon after xxx stratum is enabled
+    strat xxx xxx-daemon --daemon
+
