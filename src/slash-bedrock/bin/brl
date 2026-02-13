@@ -62,9 +62,17 @@ case "${1:-}" in
 	print_help
 	exit_success
 	;;
-"chroot" | "strat" | "list" | "do" | "service" | "which" | "fetch" | "import" | "remove" | "rename" | "copy" | "status" | "enable" | "disable" | "repair" | "hide" | "show" | "alias" | "deref" | "apply" | "update" | "version" | "report" | "tutorial")
-t"chroot") backend="/bedrock/bin/brl-chroot" ;;
 	backend="/bedrock/libexec/brl-${1}"
+"chroot" | "strat" | "list" | "do" | "service" | "which" | "fetch" | "import" | "remove" | "rename" | "copy" | "status" | "enable" | "disable" | "repair" | "hide" | "show" | "alias" | "deref" | "apply" | "update" | "version" | "report" | "tutorial")
+	if [ "${1}" = "chroot" ]; then
+		backend="/bedrock/bin/brl-chroot"
+	else
+		backend="/bedrock/libexec/brl-${1}"
+	fi
+	shift
+	exec "${backend}" "${@}"
+	abort "Unable to execute ${backend}"
+	;;
 	shift
 	exec "${backend}" "${@}"
 	abort "Unable to execute \`${backend}\`"
