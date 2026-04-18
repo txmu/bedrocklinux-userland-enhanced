@@ -409,9 +409,8 @@ auto lo
 iface lo inet loopback
 
 auto eth0
-iface eth0 inet static
-	address $guest_ip
-	netmask $guest_netmask
+iface eth0 inet staticy
+	address $guest_ip/$guest_netmask_bits
 	gateway $guest_gateway
 EOF
 
